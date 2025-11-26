@@ -1,0 +1,52 @@
+.idea
+.env
+.graphqlconfig
+
+# Package manager
+.yarn/
+
+# Dependencies
+node_modules/
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+# Misc
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# ESLint
+.eslintcache
+
+# Build and test
+dist/
+build/
+coverage/
+
+# Cache
+.cache/
+**/node_modules
+**/*.tsbuildinfo
+
+# Sublime Test
+*.sublime-project
+*.sublime-workspace
+
+# Devenv
+.devenv*
+devenv.local.nix
+.nixpkgs
+
+# direnv
+.direnv
+
