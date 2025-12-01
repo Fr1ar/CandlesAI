@@ -1,6 +1,6 @@
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from env_text import PuzzleEnvText
+from env import PuzzleEnvText
 
 if __name__ == "__main__":
     # Векторизуем среду для обучения
