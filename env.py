@@ -1,19 +1,16 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
+from utils import log_action
 
 class PuzzleEnvText(gym.Env):
-    """
-    Среда "свечи и ключ" с поддержкой text_level.
-    Проверка столкновений и штраф за недвигаемые блоки.
-    Добавлена маска действий для RL.
-    """
     metadata = {"render_modes": ["human"]}
 
     def __init__(self):
         super().__init__()
         self.width = 6
         self.height = 6
+        self.stepNum = 0
 
         self.blocks = {}       # block_id -> {"x","y","w","h","type"}
         self.key_id = None
@@ -23,54 +20,64 @@ class PuzzleEnvText(gym.Env):
         self.action_space = spaces.MultiDiscrete([1,2])
         self.observation_space = spaces.Box(low=0, high=255, shape=(6,6), dtype=np.uint8)
 
-    def reset(self, text_level=None, seed=None, options=None):
-        self.blocks = {}
-        self.block_texts = {}
-        self.key_id = None
+    def generate_default_level(self):
         next_id = 0
 
-        if text_level is None:
-            # стандартный тестовый уровень
-            self.blocks[next_id] = {"x":0, "y":0, "w":2, "h":1, "type":"H"}  # ключ
-            self.key_id = next_id
-            self.block_texts[next_id] = "0"
-            next_id += 1
+        self.blocks[next_id] = {"x": 0, "y": 2, "w": 2, "h": 1, "type": "H"}  # ключ
+        self.key_id = next_id
+        self.block_texts[next_id] = "0"
+        next_id += 1
 
-            self.blocks[next_id] = {"x":2, "y":0, "w":3, "h":1, "type":"H"}  # горизонтальная свеча
-            self.block_texts[next_id] = "a"
-            next_id += 1
+        self.blocks[next_id] = {"x": 2, "y": 0, "w": 3, "h": 1, "type": "H"}  # горизонтальная свеча
+        self.block_texts[next_id] = "a"
+        next_id += 1
 
-            self.blocks[next_id] = {"x":0, "y":1, "w":1, "h":3, "type":"V"}  # вертикальная свеча
-            self.block_texts[next_id] = "b"
-            next_id += 1
+        self.blocks[next_id] = {"x": 3, "y": 1, "w": 1, "h": 3, "type": "V"}  # вертикальная свеча
+        self.block_texts[next_id] = "b"
+        next_id += 1
 
-        else:
-            # Разбор text_level
-            lines = text_level.split(".")
-            for y, line in enumerate(lines):
-                cells = line.split()
-                x = 0
-                while x < len(cells):
-                    cell = cells[x]
-                    if cell != "-":
-                        w = 1
-                        h = 1
-                        while x + w < len(cells) and cells[x + w] == cell:
-                            w += 1
-                        if cell == "0":
-                            block_type = "H"
-                            self.key_id = next_id
-                        else:
-                            block_type = "H" if w > 1 else "V"
-                        self.blocks[next_id] = {"x":x, "y":y, "w":w, "h":h, "type":block_type}
-                        self.block_texts[next_id] = cell
-                        next_id += 1
-                        x += w
+    def parse_level(self, level_text):
+        next_id = 0
+        lines = level_text.split(".")
+        for y, line in enumerate(lines):
+            cells = line.split()
+            x = 0
+            while x < len(cells):
+                cell = cells[x]
+                if cell != "-":
+                    w = 1
+                    h = 1
+                    while x + w < len(cells) and cells[x + w] == cell:
+                        w += 1
+                    if cell == "0":
+                        block_type = "H"
+                        self.key_id = next_id
                     else:
-                        x += 1
+                        block_type = "H" if w > 1 else "V"
+                    self.blocks[next_id] = {"x": x, "y": y, "w": w, "h": h, "type": block_type}
+                    self.block_texts[next_id] = cell
+                    next_id += 1
+                    x += w
+                else:
+                    x += 1
 
         if self.key_id is None:
             raise ValueError("В text_level не найден ключ '0' и стандартный уровень не создан")
+
+    def reset(self, text_level=None, seed=None, options=None):
+        super().reset(seed=seed)
+
+        print('reset')
+
+        self.blocks = {}
+        self.block_texts = {}
+        self.key_id = None
+        self.stepNum = 0
+
+        if text_level is None:
+            self.generate_default_level()
+        else:
+            self.parse_level(text_level)
 
         self.action_space = spaces.MultiDiscrete([len(self.blocks), 2])
         self.state = self._get_obs()
@@ -164,6 +171,13 @@ class PuzzleEnvText(gym.Env):
         if self._is_solved():
             terminated = True
             reward += 1.0
+
+        log_action(action, self, moved, self.stepNum, reward)
+        self.stepNum += 1
+
+        if self.stepNum == 100:
+            print("Simulation stopped")
+            quit()
 
         obs = self._get_obs()
         info = {"moved": moved, "action_mask": self.get_action_mask()}
