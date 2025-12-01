@@ -41,29 +41,66 @@ class PuzzleEnvExplore(gym.Env):
     def parse_level(self):
         next_id = 0
         lines = self.text_level.split(".")
-        for y, line in enumerate(lines):
-            cells = line.split()
-            x = 0
-            while x < len(cells):
-                cell = cells[x]
-                if cell != "-":
-                    w = 1
-                    h = 1
-                    while x + w < len(cells) and cells[x + w] == cell:
-                        w += 1
-                    if cell == "0":
-                        block_type = "H"
+        grid = [row.split() for row in lines]
+
+        H, W = len(grid), len(grid[0])
+
+        used = [[False] * W for _ in range(H)]
+
+        for y in range(H):
+            for x in range(W):
+                if grid[y][x] == "-" or used[y][x]:
+                    continue
+
+                ch = grid[y][x]
+
+                # --- проверка горизонтальной свечи ---
+                w = 1
+                while x + w < W and grid[y][x + w] == ch:
+                    w += 1
+
+                if w > 1:  # горизонтальная свеча
+                    self.blocks[next_id] = {
+                        "x": x, "y": y, "w": w, "h": 1, "type": "H"
+                    }
+                    self.block_texts[next_id] = ch
+                    if ch == "0":
                         self.key_id = next_id
-                    else:
-                        block_type = "H" if w > 1 else "V"
-                    self.blocks[next_id] = {"x": x, "y": y, "w": w, "h": h, "type": block_type}
-                    self.block_texts[next_id] = cell
+                    for dx in range(w):
+                        used[y][x + dx] = True
                     next_id += 1
-                    x += w
-                else:
-                    x += 1
+                    continue
+
+                # --- проверка вертикальной свечи ---
+                h = 1
+                while y + h < H and grid[y + h][x] == ch:
+                    h += 1
+
+                if h > 1:  # вертикальная свеча
+                    self.blocks[next_id] = {
+                        "x": x, "y": y, "w": 1, "h": h, "type": "V"
+                    }
+                    self.block_texts[next_id] = ch
+                    if ch == "0":
+                        self.key_id = next_id
+                    for dy in range(h):
+                        used[y + dy][x] = True
+                    next_id += 1
+                    continue
+
+                # --- одиночный блок (лишь одна клетка) ---
+                self.blocks[next_id] = {
+                    "x": x, "y": y, "w": 1, "h": 1,
+                    "type": "H" if ch == "0" else "V"  # ключ всегда горизонтальный
+                }
+                self.block_texts[next_id] = ch
+                if ch == "0":
+                    self.key_id = next_id
+                used[y][x] = True
+                next_id += 1
+
         if self.key_id is None:
-            raise ValueError("В text_level не найден ключ '0' и стандартный уровень не создан")
+            raise ValueError("Ключ '0' не найден")
 
     # ----------------- reset -----------------
     def reset(self, seed=None, options=None):
