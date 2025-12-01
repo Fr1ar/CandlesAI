@@ -1,9 +1,7 @@
 # CandlesAI
 
-# Установка зависимостей:
-```bash
-pip3 install -r requirements.txt
-```
+Установка зависимостей:
 
-# Настройка окружения
-Используя файл `.env.example` сделай правильный файл `.env`
+```bash
+pip install -r requirements.txt
+```
