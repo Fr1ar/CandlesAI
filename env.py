@@ -16,12 +16,13 @@ class PuzzleEnvExplore(gym.Env):
         self.key_id = None
         self.state = None
         self.block_texts = {}
-        self.exploration_prob = exploration_prob  # вероятность случайного действия
+        self.exploration_prob = exploration_prob
 
         # action: (block_id, direction)
         self.action_space = spaces.MultiDiscrete([1,2])
         self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(6*6*3,), dtype=np.float32)
 
+    # ----------------- генерация уровня по умолчанию -----------------
     def generate_default_level(self):
         next_id = 0
         self.blocks[next_id] = {"x": 0, "y": 2, "w": 2, "h": 1, "type": "H"}  # ключ
@@ -35,16 +36,51 @@ class PuzzleEnvExplore(gym.Env):
         self.block_texts[next_id] = "b"
         next_id += 1
 
+    # ----------------- загрузка уровня из текста -----------------
+    def parse_level(self, level_text):
+        next_id = 0
+        lines = level_text.split(".")
+        for y, line in enumerate(lines):
+            cells = line.split()
+            x = 0
+            while x < len(cells):
+                cell = cells[x]
+                if cell != "-":
+                    w = 1
+                    h = 1
+                    while x + w < len(cells) and cells[x + w] == cell:
+                        w += 1
+                    if cell == "0":
+                        block_type = "H"
+                        self.key_id = next_id
+                    else:
+                        block_type = "H" if w > 1 else "V"
+                    self.blocks[next_id] = {"x": x, "y": y, "w": w, "h": h, "type": block_type}
+                    self.block_texts[next_id] = cell
+                    next_id += 1
+                    x += w
+                else:
+                    x += 1
+        if self.key_id is None:
+            raise ValueError("В text_level не найден ключ '0' и стандартный уровень не создан")
+
+    # ----------------- reset -----------------
     def reset(self, text_level=None, seed=None, options=None):
         super().reset(seed=seed)
         self.blocks = {}
         self.block_texts = {}
         self.key_id = None
         self.stepNum = 0
-        self.generate_default_level()
+
+        if text_level is None:
+            self.generate_default_level()
+        else:
+            self.parse_level(text_level)
+
         self.state = self._get_obs()
         return self.state, {}
 
+    # ----------------- наблюдение -----------------
     def _get_obs(self):
         obs = np.zeros((6,6,3), dtype=np.float32)
         for block_id, block in self.blocks.items():
@@ -57,6 +93,7 @@ class PuzzleEnvExplore(gym.Env):
                         obs[ny,nx,channel] = 1.0
         return obs.flatten()
 
+    # ----------------- движение блоков -----------------
     def _can_move(self, block_id, direction):
         if block_id not in self.blocks:
             return False
@@ -82,18 +119,21 @@ class PuzzleEnvExplore(gym.Env):
         else:
             block["y"] = max(0, min(self.height-block["h"], block["y"] + (1 if direction==1 else -1)))
 
+    # ----------------- награда -----------------
     def _compute_reward(self, block_id, moved):
         reward = 0.0
         key = self.blocks[self.key_id]
-        reward += (key["x"]+key["w"]-1)*0.01  # небольшой бонус за продвижение ключа
+        reward += (key["x"]+key["w"]-1)*0.01      # небольшой бонус за продвижение ключа
         if moved and block_id != self.key_id:
             reward += 0.2  # бонус за движение свечей
         return reward
 
+    # ----------------- проверка решения -----------------
     def _is_solved(self):
         key = self.blocks[self.key_id]
         return key["x"]+key["w"]-1 == 5
 
+    # ----------------- step -----------------
     def step(self, action):
         # --- forced random exploration ---
         if np.random.rand() < self.exploration_prob:
@@ -107,13 +147,13 @@ class PuzzleEnvExplore(gym.Env):
         if self._can_move(block_id, direction):
             self._move_block(block_id, direction)
             moved = True
+
         reward = self._compute_reward(block_id, moved)
         terminated = self._is_solved()
         truncated = False # self.stepNum >= 1000000
-        info = {"is_success": terminated}
         # log_action(action, self, moved, self.stepNum, reward)
         if terminated:
             print('Выход найден за {0} ходов'.format(self.stepNum))
-
         self.stepNum += 1
+        info = {"moved": moved, "is_success": terminated}
         return self._get_obs(), reward, terminated, truncated, info
