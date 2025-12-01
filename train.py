@@ -1,21 +1,22 @@
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from env import PuzzleEnvText
+from env import PuzzleEnvExplore
 
-if __name__ == "__main__":
-    # Векторизуем среду для обучения
-    env = make_vec_env(PuzzleEnvText, n_envs=1)
+# создаём среду
+env = make_vec_env(PuzzleEnvExplore, n_envs=1)
 
-    model = PPO(
-        "MlpPolicy",
-        env,
-        verbose=2,
-        tensorboard_log="./tb/"
-    )
+# создаём PPO
+model = PPO(
+    "MlpPolicy",
+    env,
+    # verbose=2,
+    n_steps=256,
+    batch_size=64,
+    learning_rate=3e-4,
+    ent_coef=0.1,   # увеличенная энтропия для exploration
+    n_epochs=10
+)
 
-    # Обучение
-    model.learn(total_timesteps=100_000)
-
-    # Сохраняем модель
-    model.save("puzzle-rl-text-model")
-    print("Модель обучена и сохранена")
+# обучение
+model.learn(total_timesteps=200_000)
+model.save("puzzle_ppo_explore_model")
