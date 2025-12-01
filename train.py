@@ -4,7 +4,9 @@ from env import PuzzleEnvExplore
 
 if __name__ == "__main__":
     # создаём векторизованную среду
-    env = make_vec_env(lambda: PuzzleEnvExplore(exploration_prob=0.3), n_envs=1)
+    text_level = "- - b c c c.a a b - - -.- 0 0 d - -.f f f d e e.- - g g g x.z z - h h x"
+    puzzle = PuzzleEnvExplore(exploration_prob=0.3, text_level=text_level)
+    env = make_vec_env(lambda: puzzle, n_envs=1)
 
     # создаём модель PPO
     model = PPO(

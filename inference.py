@@ -4,8 +4,8 @@ from utils import log_action, render_pretty_colored
 import time
 
 def is_solvable_debug(text_level, model_path="puzzle_ppo_explore_model", max_steps=200, delay=0.2):
-    env = PuzzleEnvExplore()
-    obs, _ = env.reset(text_level=text_level)
+    env = PuzzleEnvExplore(text_level=text_level)
+    obs, _ = env.reset()
     model = PPO.load(model_path)
 
     print("=== Начальный уровень ===")

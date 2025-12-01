@@ -7,7 +7,7 @@ import random
 class PuzzleEnvExplore(gym.Env):
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, exploration_prob=0.3):
+    def __init__(self, exploration_prob=0.3, text_level=None):
         super().__init__()
         self.width = 6
         self.height = 6
@@ -17,6 +17,7 @@ class PuzzleEnvExplore(gym.Env):
         self.state = None
         self.block_texts = {}
         self.exploration_prob = exploration_prob
+        self.text_level = text_level
 
         # action: (block_id, direction)
         self.action_space = spaces.MultiDiscrete([1,2])
@@ -37,9 +38,9 @@ class PuzzleEnvExplore(gym.Env):
         next_id += 1
 
     # ----------------- загрузка уровня из текста -----------------
-    def parse_level(self, level_text):
+    def parse_level(self):
         next_id = 0
-        lines = level_text.split(".")
+        lines = self.text_level.split(".")
         for y, line in enumerate(lines):
             cells = line.split()
             x = 0
@@ -65,17 +66,17 @@ class PuzzleEnvExplore(gym.Env):
             raise ValueError("В text_level не найден ключ '0' и стандартный уровень не создан")
 
     # ----------------- reset -----------------
-    def reset(self, text_level=None, seed=None, options=None):
+    def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.blocks = {}
         self.block_texts = {}
         self.key_id = None
         self.stepNum = 0
 
-        if text_level is None:
+        if self.text_level is None:
             self.generate_default_level()
         else:
-            self.parse_level(text_level)
+            self.parse_level()
 
         self.state = self._get_obs()
         return self.state, {}
@@ -151,7 +152,7 @@ class PuzzleEnvExplore(gym.Env):
         reward = self._compute_reward(block_id, moved)
         terminated = self._is_solved()
         truncated = False # self.stepNum >= 1000000
-        # log_action(action, self, moved, self.stepNum, reward)
+        log_action(action, self, moved, self.stepNum, reward)
         if terminated:
             print('Выход найден за {0} ходов'.format(self.stepNum))
         self.stepNum += 1
