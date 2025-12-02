@@ -66,8 +66,8 @@ def action_to_text(action, env):
 
 def log_action(action, env, moved, step, reward):
     if not moved:
-        print(f"\nШаг {step + 1}, {action_to_text(action, env)}, блок не сдвинулся, штраф {reward}")
+        print(f"\nШаг {step + 1}, {action_to_text(action, env)}, блок не сдвинулся, штраф {reward:.2f}")
     else:
-        print(f"\nШаг {step + 1}, {action_to_text(action, env)}, награда: {reward}")
+        print(f"\nШаг {step + 1}, {action_to_text(action, env)}, награда: {reward:.2f}")
 
     render_pretty_colored(env)

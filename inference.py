@@ -24,7 +24,7 @@ def is_solvable_single(text_level, model, max_steps=200, delay=0.0):
     return False
 
 
-def check_all_levels(levels, model_path="puzzle_ppo_explore_model", max_steps=300):
+def check_all_levels(levels, model_path="output/puzzle_model", max_steps=300):
     model = PPO.load(model_path)
 
     results = []
@@ -42,7 +42,7 @@ def run():
 
     print("=== Итоги ===")
     for idx, ok in results:
-        print(f"Уровень {idx}: {'✓ проходим' if ok else '✗ не проходим'}")
+        print(f"Уровень {idx}: {'✅ проходим' if ok else '❌ не проходим'}")
 
 
 if __name__ == "__main__":

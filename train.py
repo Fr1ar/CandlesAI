@@ -27,7 +27,7 @@ def run():
     model = PPO(
         "MlpPolicy",
         env,
-        verbose=1,
+        # verbose=1,
         n_steps=256,
         batch_size=64,
         learning_rate=3e-4,
@@ -35,9 +35,9 @@ def run():
         n_epochs=10,
     )
 
-    model.learn(total_timesteps=500_000)
+    model.learn(total_timesteps=1_000_000)
 
-    model.save("puzzle_ppo_explore_model")
+    model.save("output/puzzle_model")
     print("Обучение завершено.")
 
 
