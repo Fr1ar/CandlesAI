@@ -10,15 +10,10 @@ BG_YELLOW_BRIGHT = "\033[103m"
 
 
 def make_cell(bg, char):
-    """
-    Создаёт клетку вида:
-    █ c █  (фон + пробел + символ + пробел)
-    """
     return f"{bg}{FG_BLACK} {char} {RESET}"
 
 
 def render_pretty_colored(env):
-    # Пустая клетка: ярко-чёрная, пустой символ " "
     empty = make_cell(BG_BLACK_BRIGHT, " ")
 
     grid = [[empty for _ in range(6)] for _ in range(6)]
