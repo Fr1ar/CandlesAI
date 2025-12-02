@@ -8,12 +8,12 @@ import random
 class PuzzleEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, text_level=None):
+    def __init__(self, text_level=None, max_steps=50):
         super().__init__()
         self.width = 6
         self.height = 6
         self.step_num = 0
-        self.max_steps = 50
+        self.max_steps = max_steps
         self.blocks = {}
         self.key_id = None
         self.last_key_x = 0
@@ -209,7 +209,7 @@ class PuzzleEnv(gym.Env):
         key = self.blocks[self.key_id]
         if moved and block_id == self.key_id and key["x"] > self.last_key_x:
             self.last_key_x = key["x"]
-            reward += key["x"] * 1.25
+            reward = key["x"] * 1.25
 
         # Штраф за движение за границы уровня
         if violated:

@@ -4,8 +4,8 @@ from parser import load_levels
 from utils import render_pretty_colored
 
 
-def is_solvable_single(text_level, model, max_steps=200, delay=0.0):
-    env = PuzzleEnv(text_level=text_level)
+def is_solvable_single(text_level, model, max_steps):
+    env = PuzzleEnv(text_level=text_level, max_steps=max_steps)
     obs, _ = env.reset()
 
     print("=== Начальный уровень ===")
@@ -38,7 +38,7 @@ def check_all_levels(levels, model_path="output/puzzle_model", max_steps=300):
 
 def run():
     levels = load_levels("levels/single.json")
-    results = check_all_levels(levels, max_steps=100_000)
+    results = check_all_levels(levels, max_steps=200)
 
     print("=== Итоги ===")
     for idx, ok in results:
