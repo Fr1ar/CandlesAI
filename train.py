@@ -1,7 +1,7 @@
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from env import PuzzleEnv
-import json
+from parser import load_levels
 
 
 class SequentialMultiLevelEnv(PuzzleEnv):
@@ -16,15 +16,8 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         return super().reset(seed=seed, options=options)
 
 
-if __name__ == "__main__":
-    # загрузка уровней
-    levels_file = "levels/single.json"
-    with open(levels_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    levels = data.get("levels", [])
-    if not levels:
-        raise ValueError("Файл пуст")
+def run():
+    levels = load_levels("levels/single.json")
 
     def make_env_func():
         return SequentialMultiLevelEnv(levels)
@@ -34,7 +27,7 @@ if __name__ == "__main__":
     model = PPO(
         "MlpPolicy",
         env,
-        verbose=2,
+        verbose=1,
         n_steps=256,
         batch_size=64,
         learning_rate=3e-4,
@@ -46,3 +39,7 @@ if __name__ == "__main__":
 
     model.save("puzzle_ppo_explore_model")
     print("Обучение завершено.")
+
+
+if __name__ == "__main__":
+    run()

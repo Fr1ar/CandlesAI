@@ -1,7 +1,7 @@
 from stable_baselines3 import PPO
 from env import PuzzleEnv
+from parser import load_levels
 from utils import render_pretty_colored
-import json
 
 
 def is_solvable_single(text_level, model, max_steps=200, delay=0.0):
@@ -37,13 +37,7 @@ def check_all_levels(levels, model_path="puzzle_ppo_explore_model", max_steps=30
 
 
 def run():
-    with open("levels/multiple.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    levels = data.get("levels", [])
-    if not levels:
-        raise ValueError("multiple.json пуст")
-
+    levels = load_levels("levels/single.json")
     results = check_all_levels(levels, max_steps=100_000)
 
     print("=== Итоги ===")

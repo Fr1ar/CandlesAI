@@ -257,7 +257,7 @@ class PuzzleEnv(gym.Env):
         terminated = self._is_solved()
         truncated = False
 
-        # log_action((block_id, direction), self, moved, self.stepNum, reward)
+        log_action((block_id, direction), self, moved, self.stepNum, reward)
 
         self.last_action = (block_id, direction)
         self.stepNum += 1
