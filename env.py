@@ -12,9 +12,11 @@ class PuzzleEnv(gym.Env):
         super().__init__()
         self.width = 6
         self.height = 6
-        self.stepNum = 0
+        self.step_num = 0
+        self.max_steps = 50
         self.blocks = {}
         self.key_id = None
+        self.last_key_x = 0
         self.state = None
         self.block_texts = {}
         self.text_level = text_level
@@ -38,7 +40,7 @@ class PuzzleEnv(gym.Env):
 
     # ----------------- annealing exploration -----------------
     def _update_exploration_prob(self):
-        t = self.stepNum
+        t = self.step_num
         if t < 100_000:
             self.exploration_prob = 0.3
         elif t < 300_000:
@@ -134,12 +136,15 @@ class PuzzleEnv(gym.Env):
         self.block_texts = {}
         self.key_id = None
         self.last_action = None
-        self.stepNum = 0
+        self.step_num = 0
 
         if self.text_level is None:
             self.generate_default_level()
         else:
             self.parse_level()
+
+        key = self.blocks[self.key_id]
+        self.last_key_x = key["x"]
 
         # NEW: dynamic Discrete action space
         num_blocks = len(self.blocks)
@@ -194,26 +199,31 @@ class PuzzleEnv(gym.Env):
             block["y"] += 1 if direction == 1 else -1
 
     # ----------------- reward -----------------
-    def _compute_reward(self, block_id, moved, violated, is_reverse):
-        reward = 0.0
+    def _compute_reward(self, block_id, moved, violated, is_reverse, is_solved):
+        # Штраф за каждый ход, чтобы агент быстрее искал решение
+        reward = -0.1
 
+        # Награда за движение ключа вправо
         key = self.blocks[self.key_id]
-        key_end_x = key["x"] + key["w"] - 1
+        if moved and block_id == self.key_id and key["x"] > self.last_key_x:
+            self.last_key_x = key["x"]
+            reward += key["x"] * 1.25
 
-        # 1) KEY PROGRESS — bigger
-        reward += key_end_x * 0.05
-
-        # 2) reward for moving non-key
-        if moved and block_id != self.key_id:
-            reward += 0.15
-
-        # 3) penalty for borders/collisions
+        # Штраф за движение за границы уровня
         if violated:
-            reward -= 1.2
+            reward = -0.5
 
-        # 4) penalty for reverse
+        # Штраф за движение туда-обратно
         if is_reverse:
-            reward -= 0.5
+            reward = -0.5
+
+        # Награда за решение
+        if is_solved:
+            reward = 10
+
+        # Штраф за ненайденное решение
+        if not is_solved and self.step_num >= self.max_steps:
+            reward = -10
 
         return reward
 
@@ -251,15 +261,16 @@ class PuzzleEnv(gym.Env):
         else:
             violated = True
 
-        # compute reward
-        reward = self._compute_reward(block_id, moved, violated, is_reverse)
-
-        terminated = self._is_solved()
+        is_solved = self._is_solved()
+        terminated = is_solved or self.step_num >= self.max_steps
         truncated = False
 
-        log_action((block_id, direction), self, moved, self.stepNum, reward)
+        # compute reward
+        reward = self._compute_reward(block_id, moved, violated, is_reverse, is_solved)
+
+        log_action((block_id, direction), self, moved, self.step_num, reward)
 
         self.last_action = (block_id, direction)
-        self.stepNum += 1
+        self.step_num += 1
 
         return self._get_obs(), reward, terminated, truncated, {}
