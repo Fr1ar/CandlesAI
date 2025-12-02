@@ -4,7 +4,7 @@ from gymnasium import spaces
 from utils import log_action
 import random
 
-class PuzzleEnvExplore(gym.Env):
+class PuzzleEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
     def __init__(self, exploration_prob=0.3, text_level=None):

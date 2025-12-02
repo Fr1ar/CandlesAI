@@ -1,38 +1,55 @@
 from stable_baselines3 import PPO
-from env import PuzzleEnvExplore
-from utils import log_action, render_pretty_colored
-import time
+from env import PuzzleEnv
+from utils import render_pretty_colored
+import json
 
-def is_solvable_debug(text_level, model_path="puzzle_ppo_explore_model", max_steps=200, delay=0.2):
-    env = PuzzleEnvExplore(text_level=text_level)
+
+def is_solvable_single(text_level, model, max_steps=200, delay=0.0):
+    env = PuzzleEnv(text_level=text_level)
     obs, _ = env.reset()
-    model = PPO.load(model_path)
 
     print("=== Начальный уровень ===")
     render_pretty_colored(env)
-    print("\n")
-    time.sleep(delay)
+    print()
 
     for step in range(max_steps):
-        action, _ = model.predict(obs, deterministic=False)
+        action, _ = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
-        moved = info.get("moved", False)
-
-        log_action(action, env, moved, step, reward)
-
-        print("-"*30)
-        time.sleep(delay)
 
         if terminated:
-            print("\nУровень пройден!")
+            print("Уровень пройден!\n")
             return True
 
-    print("\nУровень непроходимый по версии модели")
+    print("Нет решения.\n")
     return False
 
 
+def check_all_levels(levels, model_path="puzzle_ppo_explore_model", max_steps=300):
+    model = PPO.load(model_path)
+
+    results = []
+    for i, level in enumerate(levels):
+        print(f"=== Уровень {i+1}/{len(levels)} ===")
+        ok = is_solvable_single(level, model, max_steps=max_steps)
+        results.append((i, ok))
+
+    return results
+
+
+def run():
+    with open("levels/multiple.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    levels = data.get("levels", [])
+    if not levels:
+        raise ValueError("multiple.json пуст")
+
+    results = check_all_levels(levels, max_steps=100_000)
+
+    print("=== Итоги ===")
+    for idx, ok in results:
+        print(f"Уровень {idx}: {'✓ проходим' if ok else '✗ не проходим'}")
+
+
 if __name__ == "__main__":
-    # Пример текстового уровня
-    text_level = "- - b c c c.a a b - - -.- 0 0 d - -.f f f d e e.- - g g g x.z z - h h x"
-    result = is_solvable_debug(text_level, max_steps=100_000, delay=0)
-    print("Проходимость уровня:", result)
+    run()
