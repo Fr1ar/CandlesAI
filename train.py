@@ -8,7 +8,7 @@ class SequentialMultiLevelEnv(PuzzleEnv):
     def __init__(self, levels):
         self.levels = levels
         self.level_index = 0
-        super().__init__(exploration_prob=0.3, text_level=None)
+        super().__init__(text_level=None)
 
     def reset(self, seed=None, options=None):
         self.text_level = self.levels[self.level_index]

@@ -13,10 +13,10 @@ def is_solvable_single(text_level, model, max_steps=200, delay=0.0):
     print()
 
     for step in range(max_steps):
-        action, _ = model.predict(obs, deterministic=True)
-        obs, reward, terminated, truncated, info = env.step(action)
+        action, _ = model.predict(obs, deterministic=False)
+        obs, reward, terminated, truncated, is_solved, info = env.step(action)
 
-        if terminated:
+        if is_solved:
             print("Уровень пройден!\n")
             return True
 

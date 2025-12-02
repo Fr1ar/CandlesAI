@@ -8,7 +8,7 @@ import random
 class PuzzleEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, exploration_prob=0.3, text_level=None):
+    def __init__(self, text_level=None):
         super().__init__()
         self.width = 6
         self.height = 6
@@ -22,8 +22,8 @@ class PuzzleEnv(gym.Env):
         self.text_level = text_level
 
         # annealing
-        self.initial_exploration = exploration_prob
-        self.exploration_prob = exploration_prob
+        self.initial_exploration = 0
+        self.exploration_prob = 0
 
         # For reverse-move penalty
         self.last_action = None
@@ -42,11 +42,11 @@ class PuzzleEnv(gym.Env):
     def _update_exploration_prob(self):
         t = self.step_num
         if t < 100_000:
-            self.exploration_prob = 0.3
+            self.exploration_prob = 0.10
         elif t < 300_000:
-            self.exploration_prob = 0.15
-        else:
             self.exploration_prob = 0.05
+        else:
+            self.exploration_prob = 0.005
 
     # ----------------- generate default level -----------------
     def generate_default_level(self):
@@ -137,6 +137,8 @@ class PuzzleEnv(gym.Env):
         self.key_id = None
         self.last_action = None
         self.step_num = 0
+
+        self._update_exploration_prob()
 
         if self.text_level is None:
             self.generate_default_level()
@@ -273,4 +275,4 @@ class PuzzleEnv(gym.Env):
         self.last_action = (block_id, direction)
         self.step_num += 1
 
-        return self._get_obs(), reward, terminated, truncated, {}
+        return self._get_obs(), reward, terminated, truncated, is_solved, {}
