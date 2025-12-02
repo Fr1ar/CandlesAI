@@ -1,6 +1,8 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
+
+from parser import parse_level, generate_default_level
 from utils import log_action
 import random
 
@@ -13,6 +15,7 @@ class PuzzleEnv(gym.Env):
         self.width = 6
         self.height = 6
         self.step_num = 0
+        self.total_steps = 0
         self.max_steps = max_steps
         self.blocks = {}
         self.key_id = None
@@ -48,87 +51,6 @@ class PuzzleEnv(gym.Env):
         else:
             self.exploration_prob = 0.005
 
-    # ----------------- generate default level -----------------
-    def generate_default_level(self):
-        next_id = 0
-        self.blocks[next_id] = {"x": 0, "y": 2, "w": 2, "h": 1, "type": "H"}
-        self.block_texts[next_id] = "0"
-        self.key_id = next_id
-        next_id += 1
-
-        self.blocks[next_id] = {"x": 2, "y": 0, "w": 3, "h": 1, "type": "H"}
-        self.block_texts[next_id] = "a"
-        next_id += 1
-
-        self.blocks[next_id] = {"x": 3, "y": 1, "w": 1, "h": 3, "type": "V"}
-        self.block_texts[next_id] = "b"
-        next_id += 1
-
-    # ----------------- parse text level -----------------
-    def parse_level(self):
-        next_id = 0
-        lines = self.text_level.split(".")
-        grid = [row.split() for row in lines]
-
-        H, W = len(grid), len(grid[0])
-        used = [[False] * W for _ in range(H)]
-
-        for y in range(H):
-            for x in range(W):
-                if grid[y][x] == "-" or used[y][x]:
-                    continue
-
-                ch = grid[y][x]
-
-                # horizontal?
-                w = 1
-                while x + w < W and grid[y][x + w] == ch:
-                    w += 1
-
-                if w > 1:
-                    self.blocks[next_id] = {"x": x, "y": y, "w": w, "h": 1, "type": "H"}
-                    self.block_texts[next_id] = ch
-                    if ch == "0":
-                        self.key_id = next_id
-
-                    for dx in range(w):
-                        used[y][x + dx] = True
-
-                    next_id += 1
-                    continue
-
-                # vertical?
-                h = 1
-                while y + h < H and grid[y + h][x] == ch:
-                    h += 1
-
-                if h > 1:
-                    self.blocks[next_id] = {"x": x, "y": y, "w": 1, "h": h, "type": "V"}
-                    self.block_texts[next_id] = ch
-                    if ch == "0":
-                        self.key_id = next_id
-
-                    for dy in range(h):
-                        used[y + dy][x] = True
-
-                    next_id += 1
-                    continue
-
-                # single block
-                self.blocks[next_id] = {
-                    "x": x, "y": y, "w": 1, "h": 1,
-                    "type": "H" if ch == "0" else "V"
-                }
-                self.block_texts[next_id] = ch
-                if ch == "0":
-                    self.key_id = next_id
-
-                used[y][x] = True
-                next_id += 1
-
-        if self.key_id is None:
-            raise ValueError("No key '0' found")
-
     # ----------------- reset -----------------
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -141,9 +63,9 @@ class PuzzleEnv(gym.Env):
         self._update_exploration_prob()
 
         if self.text_level is None:
-            self.generate_default_level()
+            self.blocks, self.block_texts, self.key_id = generate_default_level()
         else:
-            self.parse_level()
+            self.blocks, self.block_texts, self.key_id = parse_level(text_level=self.text_level)
 
         key = self.blocks[self.key_id]
         self.last_key_x = key["x"]
@@ -270,9 +192,10 @@ class PuzzleEnv(gym.Env):
         # compute reward
         reward = self._compute_reward(block_id, moved, violated, is_reverse, is_solved)
 
-        log_action((block_id, direction), self, moved, self.step_num, reward)
+        log_action((block_id, direction), self, moved, self.step_num, self.total_steps, reward)
 
         self.last_action = (block_id, direction)
         self.step_num += 1
+        self.total_steps += 1
 
-        return self._get_obs(), reward, terminated, truncated, is_solved, {}
+        return self._get_obs(), reward, terminated, truncated, {}

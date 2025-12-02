@@ -64,10 +64,10 @@ def action_to_text(action, env):
     return f"Двигаем {type_str} '{char}' {dir_str}"
 
 
-def log_action(action, env, moved, step, reward):
+def log_action(action, env, moved, step, total_steps, reward):
     if not moved:
-        print(f"\nШаг {step + 1}, {action_to_text(action, env)}, блок не сдвинулся, штраф {reward:.2f}")
+        print(f"\nШаг {step + 1} (всего: {total_steps + 1}), {action_to_text(action, env)}, блок не сдвинулся, штраф {reward:.2f}")
     else:
-        print(f"\nШаг {step + 1}, {action_to_text(action, env)}, награда: {reward:.2f}")
+        print(f"\nШаг {step + 1} (всего: {total_steps + 1}), {action_to_text(action, env)}, награда: {reward:.2f}")
 
     render_pretty_colored(env)
