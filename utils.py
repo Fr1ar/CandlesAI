@@ -3,11 +3,12 @@ RESET = "\033[0m"
 FG_BLACK = "\033[30m"
 
 # Яркие фоны
-BG_BLACK_BRIGHT  = "\033[100m"
+BG_BLACK_BRIGHT  = "\033[40m"
 BG_GREEN_BRIGHT  = "\033[102m"
 BG_RED_BRIGHT    = "\033[101m"
 BG_YELLOW_BRIGHT = "\033[103m"
 
+FG_GRAY_DARK = "\033[90m"
 
 def make_cell(bg, char):
     return f"{bg}{FG_BLACK} {char} {RESET}"
@@ -37,9 +38,13 @@ def render_pretty_colored(env):
                 if 0 <= ny < 6 and 0 <= nx < 6:
                     grid[ny][nx] = cell
 
+    # --- рамка тёмно-серого цвета ---
+    top_border = f"{FG_GRAY_DARK}┌" + "───" * 6 + "┐" + RESET
+    bottom_border = f"{FG_GRAY_DARK}└" + "───" * 6 + "┘" + RESET
+    print(top_border)
     for row in grid:
-        print("".join(row))
-
+        print(f"{FG_GRAY_DARK}│{RESET}" + "".join(row) + f"{FG_GRAY_DARK}│{RESET}")
+    print(bottom_border)
 
 def action_to_text(action, env):
     """
@@ -102,5 +107,4 @@ def log_action(action, env, moved, step, total_steps, reward):
             f"\nШаг {step + 1} (всего: {total_steps + 1}), "
             f"{action_text}, награда: {reward:.2f}"
         )
-
     render_pretty_colored(env)

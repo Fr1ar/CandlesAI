@@ -66,7 +66,7 @@ class PuzzleEnv(gym.Env):
         else:
             self.blocks, self.block_texts, self.key_id = parse_level(text_level=self.text_level)
 
-        print("=== Начальный уровень ===")
+        print("\n=== Начальный уровень ===")
         render_pretty_colored(self)
 
         return self._get_obs(), {}
