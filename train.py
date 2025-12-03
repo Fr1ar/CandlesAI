@@ -18,10 +18,6 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         return super().reset(seed=seed, options=options)
 
 
-def mask_fn(env):
-    return env.action_mask()
-
-
 def run():
     levels = load_levels("levels/difficult.json")
 

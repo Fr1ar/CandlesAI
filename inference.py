@@ -1,4 +1,4 @@
-from stable_baselines3 import PPO
+from sb3_contrib import MaskablePPO
 from env import PuzzleEnv
 from parser import load_levels
 from utils import render_pretty_colored
@@ -13,11 +13,11 @@ def is_solvable_single(text_level, model, max_steps=200):
     print()
 
     for step in range(max_steps):
-        # MultiDiscrete action: model.predict возвращает 1D int array
+        # MaskablePPO требует передачи mask только для обучения,
+        # при инференсе можно просто использовать predict()
         action, _ = model.predict(obs, deterministic=True)
-        # если action MultiDiscrete, то берем tuple для step
-        if hasattr(env.action_space, "nvec"):
-            action = tuple(action)
+        action = int(action)  # Discrete(MAX_BLOCKS*2)
+
         obs, reward, terminated, truncated, info = env.step(action)
 
         if info.get("is_success") or env._is_solved():
@@ -29,7 +29,7 @@ def is_solvable_single(text_level, model, max_steps=200):
 
 
 def check_all_levels(levels, model_path="output/puzzle_model", max_steps=200):
-    model = PPO.load(model_path)
+    model = MaskablePPO.load(model_path)
 
     results = []
     for i, level in enumerate(levels):

@@ -42,17 +42,34 @@ def render_pretty_colored(env):
 
 
 def action_to_text(action, env):
-    block_id, direction = action
+    """
+    Accepts action in several forms:
+      - scalar int (Discrete action)
+      - tuple/list (block_index, direction)  -- kept for compatibility
+      - numpy array
+    """
+    # normalize to (block_index, direction) and produce human-readable text
+    if isinstance(action, (list, tuple)):
+        # if user passed tuple (block_idx, dir)
+        block_index = int(action[0])
+        direction = int(action[1]) if len(action) > 1 else 0
+    elif hasattr(action, "dtype") and isinstance(action, (np.ndarray,)):
+        a = int(np.asarray(action).flatten()[0])
+        block_index = a // 2
+        direction = a % 2
+    else:
+        # scalar
+        a = int(action)
+        block_index = a // 2
+        direction = a % 2
 
-    # -------------------------
-    #   ОБРАБОТКА INVALID IDX
-    # -------------------------
-    if block_id == -1:
-        dir_str = (
-            "влево/вверх" if direction == 0 else "вправо/вниз"
-        )
-        return f"Некорректное действие: block_id отсутствует, направление {dir_str}"
+    # map block_index -> block_id (real)
+    block_items = list(env.blocks.items())
+    if not (0 <= block_index < len(block_items)):
+        dir_str = ("влево/вверх" if direction == 0 else "вправо/вниз")
+        return f"Некорректное действие: block_index {block_index} отсутствует, направление {dir_str}"
 
+    block_id = block_items[block_index][0]
     block = env.blocks.get(block_id)
     if block is None:
         return f"Блок {block_id} не найден"
