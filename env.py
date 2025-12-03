@@ -3,15 +3,12 @@ import gymnasium as gym
 from gymnasium import spaces
 from parser import parse_level, generate_default_level
 from utils import log_action
+from sb3_contrib.common.wrappers import ActionMasker
 
-# Максимум блоков (свечи+ключ)
 MAX_BLOCKS = 15
-
-# Сколько числовых признаков на блок (x,y,w,h,type_H,is_key) -> 6
 FEATURES_PER_BLOCK = 6
-
-# Размер матрицы наблюдений
 OBS_SIZE = MAX_BLOCKS * FEATURES_PER_BLOCK
+
 
 class PuzzleEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
@@ -23,9 +20,7 @@ class PuzzleEnv(gym.Env):
         self.max_steps = max_steps
 
         self.text_level = text_level
-
-        # состояние уровня
-        self.blocks = {}         # dict: id -> {x,y,w,h,type}
+        self.blocks = {}
         self.block_texts = {}
         self.key_id = None
         self.step_num = 0
@@ -33,13 +28,34 @@ class PuzzleEnv(gym.Env):
         self.last_action = None
         self.prev_actions = []
 
-        # --- FIXED spaces (must be set in __init__) ---
-        # flattened observation: MAX_BLOCKS * FEATURES_PER_BLOCK
         self.observation_space = spaces.Box(
             low=0.0, high=1.0, shape=(OBS_SIZE,), dtype=np.float32
         )
-        # MultiDiscrete: choose block index [0..MAX_BLOCKS-1] and direction [0..1]
+        # MultiDiscrete: [blockIndex, direction]
         self.action_space = spaces.MultiDiscrete([MAX_BLOCKS, 2])
+
+    # ----------------- MASK FOR MaskablePPO -----------------
+    def action_mask(self):
+        block_items = list(self.blocks.items())
+        num_blocks = len(block_items)
+
+        # --- 1) маска выбора блока (15 категорий) ---
+        block_mask = np.zeros(MAX_BLOCKS, dtype=np.int8)
+
+        for i in range(num_blocks):
+            block_mask[i] = 1
+
+        # --- 2) маска выбора направления (2 категории) ---
+        dir_mask = np.zeros(2, dtype=np.int8)
+
+        for direction in (0, 1):
+            for block_id, block in block_items:
+                if self._can_move(block_id, direction):
+                    dir_mask[direction] = 1
+                    break
+
+        # итоговая маска = concat([block_mask, dir_mask])
+        return np.concatenate([block_mask, dir_mask])
 
     # ----------------- reset -----------------
     def reset(self, seed=None, options=None):
@@ -51,59 +67,50 @@ class PuzzleEnv(gym.Env):
         self.step_num = 0
         self.prev_actions = []
 
-        # parse or generate
         if self.text_level is None:
             self.blocks, self.block_texts, self.key_id = generate_default_level()
         else:
             self.blocks, self.block_texts, self.key_id = parse_level(text_level=self.text_level)
 
-        self.last_block_direction = None
+        return self._get_obs(), {}
 
-        obs = self._get_obs()
-        return obs, {}
-
-    # ----------------- observation (fixed-size flattened) -----------------
+    # ----------------- observation -----------------
     def _get_obs(self):
         arr = np.zeros((MAX_BLOCKS, FEATURES_PER_BLOCK), dtype=np.float32)
-        # fill existing blocks in order of their ids (assuming contiguous small ids)
-        # If block ids are sparse, we map them into 0..(n-1) by enumerating items
+
         for i, (block_id, block) in enumerate(self.blocks.items()):
             if i >= MAX_BLOCKS:
                 break
+
             x, y, w, h = block["x"], block["y"], block["w"], block["h"]
             type_H = 1.0 if block["type"] == "H" else 0.0
             is_key = 1.0 if block_id == self.key_id else 0.0
-            # normalize positions/sizes by grid size
-            arr[i, 0] = x / (self.width - 1)   # normalized x in [0,1]
+
+            arr[i, 0] = x / (self.width - 1)
             arr[i, 1] = y / (self.height - 1)
             arr[i, 2] = w / self.width
             arr[i, 3] = h / self.height
             arr[i, 4] = type_H
             arr[i, 5] = is_key
+
         return arr.flatten()
 
-    # ----------------- helper: map chosen index -> real block id -----------------
     def _index_to_block_id(self, chosen_index):
-        # if there are fewer blocks than MAX_BLOCKS, chosen_index may be invalid
-        # map used indices 0..n-1 to actual block ids (enumeration order)
         block_items = list(self.blocks.items())
-        if chosen_index < 0:
-            return None
-        if chosen_index < len(block_items):
-            return block_items[chosen_index][0]  # actual block_id
-        return None  # invalid (no block at that slot)
+        if 0 <= chosen_index < len(block_items):
+            return block_items[chosen_index][0]
+        return None
 
-    # ----------------- can move / move -----------------
     def _can_move(self, block_id, direction):
         block = self.blocks[block_id]
         dx = (1 if direction == 1 else -1) if block["type"] == "H" else 0
         dy = (1 if direction == 1 else -1) if block["type"] == "V" else 0
-        # border
+
         if block["x"] + dx < 0 or block["x"] + block["w"] + dx > self.width:
             return False
         if block["y"] + dy < 0 or block["y"] + block["h"] + dy > self.height:
             return False
-        # collisions
+
         for oid, other in self.blocks.items():
             if oid == block_id:
                 continue
@@ -112,6 +119,7 @@ class PuzzleEnv(gym.Env):
                 block["y"] + dy < other["y"] + other["h"] and
                 block["y"] + block["h"] + dy > other["y"]):
                 return False
+
         return True
 
     def _move_block(self, block_id, direction):
@@ -121,77 +129,50 @@ class PuzzleEnv(gym.Env):
         else:
             block["y"] += 1 if direction == 1 else -1
 
-    # ----------------- reward -----------------
     def _compute_reward(self, block_id, direction, moved, violated, is_reverse, is_solved, terminated, invalid_action=False):
-        # baseline small negative step so agent prefers shorter solutions
         reward = 0
 
         if moved:
             reward += 0.05
-
         if invalid_action:
-            # small penalty for selecting empty slot / nonexistent block
             reward -= 0.3
-
-        # Дадим небольшую награду за повторение предыдущего действия
         if self.last_action is not None and self.last_action[0] == block_id and self.last_action[1] == direction:
             reward += 0.10
-
-        # key = self.blocks[self.key_id]
-        # if moved and block_id == self.key_id and key["x"] > self.last_key_x:
-        #     self.last_key_x = key["x"]
-        #     reward += 1.0  # stronger positive for key progress
-
-       #  if moved and block_id != self.key_id:
-            # reward += 0.2  # small positive for moving other blocks (encourage exploring them)
-
         if violated:
             reward -= 0.6
-
         if is_reverse:
             reward -= 0.4
-
         if is_solved:
             reward += 10.0
-
         if not is_solved and terminated:
             reward -= 5.0
-
         return reward
 
-    # ----------------- solved -----------------
     def _is_solved(self):
         key = self.blocks[self.key_id]
         return key["x"] + key["w"] - 1 == (self.width - 1)
 
-    # ----------------- step -----------------
     def step(self, action):
         if isinstance(action, np.ndarray):
             action = action.flatten()
-        # when action comes as e.g. array([a,b]) or scalar - handle both
-        try:
-            chosen_index = int(action[0])
-            direction = int(action[1])
-        except Exception:
-            # fallback: scalar -> treat as Discrete(MAX_BLOCKS*2) style
-            a = int(action)
-            chosen_index = a // 2
-            direction = a % 2
 
-        # map chosen index to real block id (if exists)
+        chosen_index = int(action[0])
+        direction = int(action[1])
+
         real_block_id = self._index_to_block_id(chosen_index)
         invalid_action = real_block_id is None
 
-        is_reverse = False
         moved = False
         violated = False
+        is_reverse = False
 
         if not invalid_action:
             is_reverse = (
-                self.last_action is not None
-                and self.last_action[0] == real_block_id
-                and self.last_action[1] != direction
+                self.last_action is not None and
+                self.last_action[0] == real_block_id and
+                self.last_action[1] != direction
             )
+
             if self._can_move(real_block_id, direction):
                 self._move_block(real_block_id, direction)
                 moved = True
@@ -210,21 +191,15 @@ class PuzzleEnv(gym.Env):
             is_reverse,
             is_solved,
             terminated,
-            invalid_action=invalid_action,
+            invalid_action,
         )
 
         self.prev_actions.append(f"{real_block_id}:{direction}")
         log_action(action, self, moved, self.step_num, self.total_steps, reward)
 
-        if terminated:
-            prev_actions_str = ' '.join(map(str, self.prev_actions))
-            # print(f"is_solved: {is_solved}, actions: {prev_actions_str}")
-
-
         self.step_num += 1
         self.total_steps += 1
         self.last_action = (real_block_id, direction) if not invalid_action else None
-
 
         obs = self._get_obs()
         info = {"is_success": is_solved}

@@ -1,7 +1,10 @@
-from stable_baselines3 import PPO
+from sb3_contrib import MaskablePPO
+from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.env_util import make_vec_env
+
 from env import PuzzleEnv
 from parser import load_levels
+
 
 class SequentialMultiLevelEnv(PuzzleEnv):
     def __init__(self, levels):
@@ -14,28 +17,34 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         self.level_index = (self.level_index + 1) % len(self.levels)
         return super().reset(seed=seed, options=options)
 
+
+def mask_fn(env):
+    return env.action_mask()
+
+
 def run():
     levels = load_levels("levels/difficult.json")
 
     def make_env_func():
-        return SequentialMultiLevelEnv(levels)
+        env = SequentialMultiLevelEnv(levels)
+        return ActionMasker(env, lambda env: env.action_mask())
 
     env = make_vec_env(make_env_func, n_envs=1)
 
-    model = PPO(
+    model = MaskablePPO(
         "MlpPolicy",
         env,
         n_steps=256,
         batch_size=64,
         learning_rate=3e-4,
-        ent_coef=0.2,   # достаточно высокая энтропия, чтобы пробовать разные блоки
+        ent_coef=0.2,
         n_epochs=10,
-        # verbose=1,
     )
 
     model.learn(total_timesteps=1_000_000)
     model.save("output/puzzle_model")
     print("Done")
+
 
 if __name__ == "__main__":
     run()
