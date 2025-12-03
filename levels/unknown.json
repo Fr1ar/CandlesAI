@@ -1,0 +1,9 @@
+{
+  "levels": [
+    "- - b c c c.a a b d - -.- 0 0 d - -.f f f d e e.- - g g g x.z z - h h x",
+    "- b c c c -.a b d d f g.a 0 0 e f g.q z z e f -.q - x h h h.- - x - - -",
+    "- b - - d d.a b c c f -.a 0 0 e f -.z z z e f g.- - v h h g.- - v - x x",
+    "- a - - c -.- a b b c -.0 0 e - c -.f - e d d v.f g g x - v.f h h x z z",
+    "- b - c d d.a b - c e -.a b 0 0 e -.g g f - e -.h - f z z v.h x x - - v"
+  ]
+}

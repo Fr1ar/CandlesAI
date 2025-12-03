@@ -19,7 +19,7 @@ class SequentialMultiLevelEnv(PuzzleEnv):
 
 
 def run():
-    levels = load_levels("levels/difficult.json")
+    levels = load_levels("levels/multiple.json")
 
     def make_env_func():
         env = SequentialMultiLevelEnv(levels)
@@ -37,9 +37,9 @@ def run():
         n_epochs=10,
     )
 
-    model.learn(total_timesteps=200_000)
+    model.learn(total_timesteps=20_000_000)
     model.save("output/puzzle_model")
-    print("Done")
+    print("Модель обучена и сохранена")
 
 
 if __name__ == "__main__":

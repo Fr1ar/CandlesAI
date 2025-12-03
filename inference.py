@@ -8,10 +8,6 @@ def is_solvable_single(text_level, model, max_steps=200):
     env = PuzzleEnv(text_level=text_level, max_steps=max_steps)
     obs, _ = env.reset()
 
-    print("=== Начальный уровень ===")
-    render_pretty_colored(env)
-    print()
-
     for step in range(max_steps):
         # MaskablePPO требует маску при predict
         mask = env.action_mask()

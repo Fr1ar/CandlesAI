@@ -2,7 +2,7 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 from parser import parse_level, generate_default_level
-from utils import log_action
+from utils import log_action, render_pretty_colored
 
 MAX_BLOCKS = 15
 FEATURES_PER_BLOCK = 6
@@ -65,6 +65,9 @@ class PuzzleEnv(gym.Env):
             self.blocks, self.block_texts, self.key_id = generate_default_level()
         else:
             self.blocks, self.block_texts, self.key_id = parse_level(text_level=self.text_level)
+
+        print("=== Начальный уровень ===")
+        render_pretty_colored(self)
 
         return self._get_obs(), {}
 
