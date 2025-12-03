@@ -15,7 +15,7 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         return super().reset(seed=seed, options=options)
 
 def run():
-    levels = load_levels("levels/single.json")
+    levels = load_levels("levels/difficult.json")
 
     def make_env_func():
         return SequentialMultiLevelEnv(levels)
@@ -28,12 +28,12 @@ def run():
         n_steps=256,
         batch_size=64,
         learning_rate=3e-4,
-        ent_coef=0.1,   # достаточно высокая энтропия, чтобы пробовать разные блоки
+        ent_coef=0.2,   # достаточно высокая энтропия, чтобы пробовать разные блоки
         n_epochs=10,
         # verbose=1,
     )
 
-    model.learn(total_timesteps=100_000)
+    model.learn(total_timesteps=1_000_000)
     model.save("output/puzzle_model")
     print("Done")
 

@@ -30,8 +30,8 @@ class PuzzleEnv(gym.Env):
         self.key_id = None
         self.step_num = 0
         self.total_steps = 0
-        self.last_key_x = 0
         self.last_action = None
+        self.prev_actions = []
 
         # --- FIXED spaces (must be set in __init__) ---
         # flattened observation: MAX_BLOCKS * FEATURES_PER_BLOCK
@@ -49,6 +49,7 @@ class PuzzleEnv(gym.Env):
         self.key_id = None
         self.last_action = None
         self.step_num = 0
+        self.prev_actions = []
 
         # parse or generate
         if self.text_level is None:
@@ -56,9 +57,7 @@ class PuzzleEnv(gym.Env):
         else:
             self.blocks, self.block_texts, self.key_id = parse_level(text_level=self.text_level)
 
-        # prepare last_key_x
-        key = self.blocks[self.key_id]
-        self.last_key_x = key["x"]
+        self.last_block_direction = None
 
         obs = self._get_obs()
         return obs, {}
@@ -123,21 +122,28 @@ class PuzzleEnv(gym.Env):
             block["y"] += 1 if direction == 1 else -1
 
     # ----------------- reward -----------------
-    def _compute_reward(self, block_id, moved, violated, is_reverse, is_solved, invalid_action=False):
+    def _compute_reward(self, block_id, direction, moved, violated, is_reverse, is_solved, terminated, invalid_action=False):
         # baseline small negative step so agent prefers shorter solutions
-        reward = -0.05
+        reward = 0
+
+        if moved:
+            reward += 0.05
 
         if invalid_action:
             # small penalty for selecting empty slot / nonexistent block
             reward -= 0.3
 
-        key = self.blocks[self.key_id]
-        if moved and block_id == self.key_id and key["x"] > self.last_key_x:
-            self.last_key_x = key["x"]
-            reward += 1.0  # stronger positive for key progress
+        # Дадим небольшую награду за повторение предыдущего действия
+        if self.last_action is not None and self.last_action[0] == block_id and self.last_action[1] == direction:
+            reward += 0.10
 
-        if moved and block_id != self.key_id:
-            reward += 0.2  # small positive for moving other blocks (encourage exploring them)
+        # key = self.blocks[self.key_id]
+        # if moved and block_id == self.key_id and key["x"] > self.last_key_x:
+        #     self.last_key_x = key["x"]
+        #     reward += 1.0  # stronger positive for key progress
+
+       #  if moved and block_id != self.key_id:
+            # reward += 0.2  # small positive for moving other blocks (encourage exploring them)
 
         if violated:
             reward -= 0.6
@@ -148,7 +154,7 @@ class PuzzleEnv(gym.Env):
         if is_solved:
             reward += 10.0
 
-        if not is_solved and self.step_num >= self.max_steps:
+        if not is_solved and terminated:
             reward -= 5.0
 
         return reward
@@ -193,23 +199,32 @@ class PuzzleEnv(gym.Env):
                 violated = True
 
         is_solved = self._is_solved()
-        terminated = is_solved or self.step_num >= self.max_steps
+        terminated = is_solved or self.step_num >= self.max_steps - 1
         truncated = False
 
         reward = self._compute_reward(
             real_block_id if real_block_id is not None else -1,
+            direction,
             moved,
             violated,
             is_reverse,
             is_solved,
+            terminated,
             invalid_action=invalid_action,
         )
 
+        self.prev_actions.append(f"{real_block_id}:{direction}")
         log_action(action, self, moved, self.step_num, self.total_steps, reward)
 
-        self.last_action = (real_block_id, direction) if not invalid_action else None
+        if terminated:
+            prev_actions_str = ' '.join(map(str, self.prev_actions))
+            # print(f"is_solved: {is_solved}, actions: {prev_actions_str}")
+
+
         self.step_num += 1
         self.total_steps += 1
+        self.last_action = (real_block_id, direction) if not invalid_action else None
+
 
         obs = self._get_obs()
         info = {"is_success": is_solved}
