@@ -3,7 +3,6 @@ import gymnasium as gym
 from gymnasium import spaces
 from parser import parse_level, generate_default_level
 from utils import log_action
-from sb3_contrib.common.wrappers import ActionMasker
 
 MAX_BLOCKS = 15
 FEATURES_PER_BLOCK = 6
@@ -31,13 +30,18 @@ class PuzzleEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0.0, high=1.0, shape=(OBS_SIZE,), dtype=np.float32
         )
-        self.action_space = spaces.Discrete(MAX_BLOCKS * 2)  # block_index * 2 + direction
+        # Дискретные действия: MAX_BLOCKS*2 (каждый блок можно двигать в двух направлениях)
+        self.action_space = spaces.Discrete(MAX_BLOCKS * 2)
 
     # ----------------- MASK FOR MaskablePPO -----------------
     def action_mask(self):
+        """
+        Returns 1D mask of length action_space.n (MAX_BLOCKS * 2).
+        Each action index corresponds to: action = block_index * 2 + direction
+        direction: 0 = backward (left/up), 1 = forward (right/down)
+        """
         mask = np.zeros(self.action_space.n, dtype=np.int8)
-        # сортируем блоки по id, чтобы порядок был стабильным
-        block_items = sorted(self.blocks.items(), key=lambda x: x[0])
+        block_items = list(self.blocks.items())
         num_blocks = len(block_items)
 
         for idx in range(num_blocks):
@@ -45,7 +49,6 @@ class PuzzleEnv(gym.Env):
             for direction in (0, 1):
                 if self._can_move(block_id, direction):
                     mask[idx * 2 + direction] = 1
-
         return mask
 
     # ----------------- reset -----------------
@@ -68,10 +71,7 @@ class PuzzleEnv(gym.Env):
     # ----------------- observation -----------------
     def _get_obs(self):
         arr = np.zeros((MAX_BLOCKS, FEATURES_PER_BLOCK), dtype=np.float32)
-
-        # сортировка для детерминированного порядка
-        block_items = sorted(self.blocks.items(), key=lambda x: x[0])
-        for i, (block_id, block) in enumerate(block_items):
+        for i, (block_id, block) in enumerate(self.blocks.items()):
             if i >= MAX_BLOCKS:
                 break
             x, y, w, h = block["x"], block["y"], block["w"], block["h"]
@@ -84,11 +84,10 @@ class PuzzleEnv(gym.Env):
             arr[i, 3] = h / self.height
             arr[i, 4] = type_H
             arr[i, 5] = is_key
-
         return arr.flatten()
 
     def _index_to_block_id(self, chosen_index):
-        block_items = sorted(self.blocks.items(), key=lambda x: x[0])
+        block_items = list(self.blocks.items())
         if 0 <= chosen_index < len(block_items):
             return block_items[chosen_index][0]
         return None
@@ -98,11 +97,13 @@ class PuzzleEnv(gym.Env):
         dx = (1 if direction == 1 else -1) if block["type"] == "H" else 0
         dy = (1 if direction == 1 else -1) if block["type"] == "V" else 0
 
+        # bounds check
         if block["x"] + dx < 0 or block["x"] + block["w"] + dx > self.width:
             return False
         if block["y"] + dy < 0 or block["y"] + block["h"] + dy > self.height:
             return False
 
+        # collision check
         new_x = block["x"] + dx
         new_y = block["y"] + dy
         for oid, other in self.blocks.items():
@@ -113,7 +114,6 @@ class PuzzleEnv(gym.Env):
                 new_y < other["y"] + other["h"] and
                 new_y + block["h"] > other["y"]):
                 return False
-
         return True
 
     def _move_block(self, block_id, direction):
@@ -126,7 +126,7 @@ class PuzzleEnv(gym.Env):
     def _compute_reward(self, block_id, direction, moved, violated, is_reverse, is_solved, terminated, invalid_action=False):
         reward = 0
         if moved:
-            reward -= 0.05
+            reward += 0.05
         if invalid_action:
             reward -= 0.3
         if self.last_action is not None and self.last_action[0] == block_id and self.last_action[1] == direction:
@@ -146,12 +146,11 @@ class PuzzleEnv(gym.Env):
         return key["x"] + key["w"] - 1 == (self.width - 1)
 
     def step(self, action):
+        # convert discrete action to block_index + direction
         if isinstance(action, (tuple, list, np.ndarray)):
-            if isinstance(action, np.ndarray) and action.shape != ():
-                action = int(np.asarray(action).flatten()[0])
-            else:
-                action = int(action[0])
+            action = int(np.asarray(action).flatten()[0])
         action = int(action)
+
         chosen_index = action // 2
         direction = action % 2
 
@@ -180,13 +179,7 @@ class PuzzleEnv(gym.Env):
 
         reward = self._compute_reward(
             real_block_id if real_block_id is not None else -1,
-            direction,
-            moved,
-            violated,
-            is_reverse,
-            is_solved,
-            terminated,
-            invalid_action,
+            direction, moved, violated, is_reverse, is_solved, terminated, invalid_action
         )
 
         self.prev_actions.append(f"{real_block_id}:{direction}")

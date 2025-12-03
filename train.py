@@ -37,7 +37,7 @@ def run():
         n_epochs=10,
     )
 
-    model.learn(total_timesteps=1_000_000)
+    model.learn(total_timesteps=200_000)
     model.save("output/puzzle_model")
     print("Done")
 
