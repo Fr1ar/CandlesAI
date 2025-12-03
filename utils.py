@@ -31,20 +31,28 @@ def render_pretty_colored(env):
 
         cell = make_cell(bg, char)
 
-        # заполняем блок на сетке
         for dy in range(h):
             for dx in range(w):
                 ny, nx = y + dy, x + dx
                 if 0 <= ny < 6 and 0 <= nx < 6:
                     grid[ny][nx] = cell
 
-    # выводим ровно без пробелов
     for row in grid:
         print("".join(row))
 
 
 def action_to_text(action, env):
     block_id, direction = action
+
+    # -------------------------
+    #   ОБРАБОТКА INVALID IDX
+    # -------------------------
+    if block_id == -1:
+        dir_str = (
+            "влево/вверх" if direction == 0 else "вправо/вниз"
+        )
+        return f"Некорректное действие: block_id отсутствует, направление {dir_str}"
+
     block = env.blocks.get(block_id)
     if block is None:
         return f"Блок {block_id} не найден"
@@ -65,9 +73,17 @@ def action_to_text(action, env):
 
 
 def log_action(action, env, moved, step, total_steps, reward):
+    action_text = action_to_text(action, env)
+
     if not moved:
-        print(f"\nШаг {step + 1} (всего: {total_steps + 1}), {action_to_text(action, env)}, блок не сдвинулся, штраф {reward:.2f}")
+        print(
+            f"\nШаг {step + 1} (всего: {total_steps + 1}), "
+            f"{action_text}, блок не сдвинулся, штраф {reward:.2f}"
+        )
     else:
-        print(f"\nШаг {step + 1} (всего: {total_steps + 1}), {action_to_text(action, env)}, награда: {reward:.2f}")
+        print(
+            f"\nШаг {step + 1} (всего: {total_steps + 1}), "
+            f"{action_text}, награда: {reward:.2f}"
+        )
 
     render_pretty_colored(env)

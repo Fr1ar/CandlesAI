@@ -4,7 +4,7 @@ from parser import load_levels
 from utils import render_pretty_colored
 
 
-def is_solvable_single(text_level, model, max_steps):
+def is_solvable_single(text_level, model, max_steps=200):
     env = PuzzleEnv(text_level=text_level, max_steps=max_steps)
     obs, _ = env.reset()
 
@@ -13,10 +13,14 @@ def is_solvable_single(text_level, model, max_steps):
     print()
 
     for step in range(max_steps):
-        action, _ = model.predict(obs, deterministic=False)
-        obs, reward, terminated, truncated, is_solved, info = env.step(action)
+        # MultiDiscrete action: model.predict возвращает 1D int array
+        action, _ = model.predict(obs, deterministic=True)
+        # если action MultiDiscrete, то берем tuple для step
+        if hasattr(env.action_space, "nvec"):
+            action = tuple(action)
+        obs, reward, terminated, truncated, info = env.step(action)
 
-        if is_solved:
+        if info.get("is_success") or env._is_solved():
             print("Уровень пройден!\n")
             return True
 
@@ -24,7 +28,7 @@ def is_solvable_single(text_level, model, max_steps):
     return False
 
 
-def check_all_levels(levels, model_path="output/puzzle_model", max_steps=300):
+def check_all_levels(levels, model_path="output/puzzle_model", max_steps=200):
     model = PPO.load(model_path)
 
     results = []

@@ -3,7 +3,6 @@ from stable_baselines3.common.env_util import make_vec_env
 from env import PuzzleEnv
 from parser import load_levels
 
-
 class SequentialMultiLevelEnv(PuzzleEnv):
     def __init__(self, levels):
         self.levels = levels
@@ -14,7 +13,6 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         self.text_level = self.levels[self.level_index]
         self.level_index = (self.level_index + 1) % len(self.levels)
         return super().reset(seed=seed, options=options)
-
 
 def run():
     levels = load_levels("levels/single.json")
@@ -27,19 +25,17 @@ def run():
     model = PPO(
         "MlpPolicy",
         env,
-        # verbose=1,
         n_steps=256,
         batch_size=64,
         learning_rate=3e-4,
-        ent_coef=0.1,
+        ent_coef=0.1,   # достаточно высокая энтропия, чтобы пробовать разные блоки
         n_epochs=10,
+        # verbose=1,
     )
 
     model.learn(total_timesteps=100_000)
-
     model.save("output/puzzle_model")
-    print("Обучение завершено.")
-
+    print("Done")
 
 if __name__ == "__main__":
     run()
