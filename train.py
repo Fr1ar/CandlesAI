@@ -1,11 +1,34 @@
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.callbacks import BaseCallback
+import os
 
 from env import PuzzleEnv
 from parser import load_levels
 
 
+# ------------------------------------------
+# CALLBACK ДЛЯ ПЕРИОДИЧЕСКОГО СОХРАНЕНИЯ
+# ------------------------------------------
+class SaveEveryNStepsCallback(BaseCallback):
+    def __init__(self, save_freq: int, save_path: str, verbose=1):
+        super().__init__(verbose)
+        self.save_freq = save_freq
+        self.save_path = save_path
+
+    def _on_step(self) -> bool:
+        if self.num_timesteps % self.save_freq == 0:
+            path = f"{self.save_path}_{self.num_timesteps}.zip"
+            self.model.save(path)
+            if self.verbose:
+                print(f"[Callback] Model saved to {path}")
+        return True
+
+
+# ------------------------------------------
+# MULTI-LEVEL ENV
+# ------------------------------------------
 class SequentialMultiLevelEnv(PuzzleEnv):
     def __init__(self, levels):
         self.levels = levels
@@ -18,28 +41,51 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         return super().reset(seed=seed, options=options)
 
 
-def run():
-    levels = load_levels("levels/multiple.json")
+# ------------------------------------------
+# ФУНКЦИЯ СОЗДАНИЯ СРЕДЫ С MASKER
+# ------------------------------------------
+def make_env_func(levels):
+    env = SequentialMultiLevelEnv(levels)
+    return ActionMasker(env, lambda env: env.action_mask())
 
-    def make_env_func():
-        env = SequentialMultiLevelEnv(levels)
-        return ActionMasker(env, lambda env: env.action_mask())
 
-    env = make_vec_env(make_env_func, n_envs=1)
+# ------------------------------------------
+# ОСНОВНАЯ ФУНКЦИЯ
+# ------------------------------------------
+def run(total_timesteps=10_000_000, checkpoint_freq=1_000_000, resume=False):
+    levels = load_levels("levels/difficult.json")
 
-    model = MaskablePPO(
-        "MlpPolicy",
-        env,
-        n_steps=256,
-        batch_size=64,
-        learning_rate=3e-4,
-        ent_coef=0.2,
-        n_epochs=10,
-    )
+    # Создаем векторную среду
+    env = make_vec_env(lambda: make_env_func(levels), n_envs=1)
 
-    model.learn(total_timesteps=1_000_000)
+    # Проверяем, есть ли сохранённая модель
+    model_path = "output/puzzle_model.zip"
+    if resume and os.path.exists(model_path):
+        print(f"Loading existing model from {model_path}")
+        model = MaskablePPO.load(model_path)
+        model.set_env(env)
+        reset_timesteps = False
+    else:
+        model = MaskablePPO(
+            "MlpPolicy",
+            env,
+            n_steps=256,
+            batch_size=64,
+            learning_rate=3e-4,
+            ent_coef=0.2,
+            n_epochs=10,
+        )
+        reset_timesteps = True
+
+    # Callback для периодического сохранения
+    callback = SaveEveryNStepsCallback(save_freq=checkpoint_freq, save_path="output/puzzle_model")
+
+    # Обучаем / дообучаем
+    model.learn(total_timesteps=total_timesteps, callback=callback, reset_num_timesteps=reset_timesteps)
+
+    # Сохраняем финальную модель
     model.save("output/puzzle_model")
-    print("Модель обучена и сохранена")
+    print("Training done. Final model saved as puzzle_model.zip")
 
 
 if __name__ == "__main__":
