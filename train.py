@@ -79,6 +79,8 @@ def run(total_timesteps=10_000_000, checkpoint_freq=1_000_000, resume=False):
             learning_rate=3e-4,
             ent_coef=0.2,
             n_epochs=10,
+            device="cuda",
+            verbose=1,
         )
         reset_timesteps = True
 
