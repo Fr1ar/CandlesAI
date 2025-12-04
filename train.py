@@ -8,6 +8,7 @@ import os
 from env import PuzzleEnv
 from parser import load_levels
 
+n_envs = 12
 
 # ------------------------------------------
 # CALLBACK ДЛЯ ПЕРИОДИЧЕСКОГО СОХРАНЕНИЯ
@@ -61,7 +62,7 @@ def run(total_timesteps=10_000_000, checkpoint_freq=1_000_000, resume=False):
     levels = load_levels("levels/difficult.json")
 
     # Создаем векторную среду
-    env = make_vec_env(lambda: make_env_func(levels), n_envs=1)
+    env = make_vec_env(lambda: make_env_func(levels), n_envs=n_envs)
 
     # Проверяем, есть ли сохранённая модель
     model_path = "output/puzzle_model.zip"
@@ -75,9 +76,9 @@ def run(total_timesteps=10_000_000, checkpoint_freq=1_000_000, resume=False):
             "MlpPolicy",
             env,
             n_steps=256,
-            batch_size=64,
-            learning_rate=3e-4,
-            ent_coef=0.2,
+            batch_size=1024,
+            learning_rate=2.5e-4,
+            ent_coef=0.12,
             n_epochs=10,
             device="cuda",
             verbose=1,
