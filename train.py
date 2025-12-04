@@ -50,16 +50,16 @@ class SequentialMultiLevelEnv(PuzzleEnv):
 # ------------------------------------------
 def make_env_func(levels):
     env = SequentialMultiLevelEnv(levels)
-    env.set_logging_enabled(False)
+    env.set_logging_enabled(n_envs==1)
     return ActionMasker(env, lambda env: env.action_mask())
 
 
 # ------------------------------------------
 # ОСНОВНАЯ ФУНКЦИЯ
 # ------------------------------------------
-def run(total_timesteps=10_000_000, checkpoint_freq=1_000_000, resume=False):
-    print("Training...")
-    levels = load_levels("levels/difficult.json")
+def run(total_timesteps=20_000_000, checkpoint_freq=5_000_000, resume=False):
+    print("Начало тренировки...")
+    levels = load_levels("levels/multiple.json")
 
     # Создаем векторную среду
     env = make_vec_env(lambda: make_env_func(levels), n_envs=n_envs)
@@ -76,11 +76,11 @@ def run(total_timesteps=10_000_000, checkpoint_freq=1_000_000, resume=False):
             "MlpPolicy",
             env,
             n_steps=256,
-            batch_size=1024,
+            batch_size=n_envs*64,
             learning_rate=2.5e-4,
             ent_coef=0.12,
             n_epochs=10,
-            device="cuda",
+            device="auto",
             verbose=1,
         )
         reset_timesteps = True

@@ -37,7 +37,7 @@ def check_all_levels(levels, model_path="output/puzzle_model", max_steps=200):
 
 
 def run():
-    levels = load_levels("levels/difficult.json")
+    levels = load_levels("levels/test.json")
     results = check_all_levels(levels, max_steps=200)
 
     print("=== Итоги ===")
