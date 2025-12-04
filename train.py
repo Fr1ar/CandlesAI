@@ -56,7 +56,7 @@ def make_env_func(levels):
 # ------------------------------------------
 # ОСНОВНАЯ ФУНКЦИЯ
 # ------------------------------------------
-def run(total_timesteps=1_000_000, checkpoint_freq=100_000, resume=False):
+def run(total_timesteps=10_000_000, checkpoint_freq=1_000_000, resume=False):
     print("Training...")
     levels = load_levels("levels/difficult.json")
 
