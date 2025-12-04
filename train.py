@@ -2,6 +2,7 @@ from sb3_contrib import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import BaseCallback
+from datetime import datetime
 import os
 
 from env import PuzzleEnv
@@ -19,10 +20,12 @@ class SaveEveryNStepsCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.num_timesteps % self.save_freq == 0:
+            now = datetime.now()
+            current_time = now.strftime("%H:%M:%S")
             path = f"{self.save_path}_{self.num_timesteps}.zip"
             self.model.save(path)
             if self.verbose:
-                print(f"[Callback] Model saved to {path}")
+                print(f"{current_time} [Callback] Model saved to {path}")
         return True
 
 
@@ -46,13 +49,15 @@ class SequentialMultiLevelEnv(PuzzleEnv):
 # ------------------------------------------
 def make_env_func(levels):
     env = SequentialMultiLevelEnv(levels)
+    env.set_logging_enabled(False)
     return ActionMasker(env, lambda env: env.action_mask())
 
 
 # ------------------------------------------
 # ОСНОВНАЯ ФУНКЦИЯ
 # ------------------------------------------
-def run(total_timesteps=10_000_000, checkpoint_freq=1_000_000, resume=False):
+def run(total_timesteps=1_000_000, checkpoint_freq=100_000, resume=False):
+    print("Training...")
     levels = load_levels("levels/difficult.json")
 
     # Создаем векторную среду

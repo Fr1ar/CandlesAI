@@ -26,12 +26,16 @@ class PuzzleEnv(gym.Env):
         self.total_steps = 0
         self.last_action = None
         self.prev_actions = []
+        self.logging_enabled = True
 
         self.observation_space = spaces.Box(
             low=0.0, high=1.0, shape=(OBS_SIZE,), dtype=np.float32
         )
         # Дискретные действия: MAX_BLOCKS*2 (каждый блок можно двигать в двух направлениях)
         self.action_space = spaces.Discrete(MAX_BLOCKS * 2)
+
+    def set_logging_enabled(self, enabled: bool):
+        self.logging_enabled = enabled
 
     # ----------------- MASK FOR MaskablePPO -----------------
     def action_mask(self):
@@ -66,8 +70,9 @@ class PuzzleEnv(gym.Env):
         else:
             self.blocks, self.block_texts, self.key_id = parse_level(text_level=self.text_level)
 
-        print("\n=== Начальный уровень ===")
-        render_pretty_colored(self)
+        if self.logging_enabled:
+            print("\n=== Level initial state ===")
+            render_pretty_colored(self)
 
         return self._get_obs(), {}
 
@@ -186,7 +191,9 @@ class PuzzleEnv(gym.Env):
         )
 
         self.prev_actions.append(f"{real_block_id}:{direction}")
-        log_action(action, self, moved, self.step_num, self.total_steps, reward)
+
+        if self.logging_enabled:
+            log_action(action, self, moved, self.step_num, self.total_steps, reward)
 
         self.step_num += 1
         self.total_steps += 1
