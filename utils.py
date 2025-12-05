@@ -97,14 +97,17 @@ def action_to_text(action, env):
 def log_action(action, env, moved, step, total_steps, reward):
     action_text = action_to_text(action, env)
 
+    step_fmt = f"{step + 1:,}"
+    total_steps_fmt = f"{total_steps + 1:,}"
+
     if not moved:
         print(
-            f"\nШаг {step + 1} (всего: {total_steps + 1}), "
+            f"\nШаг {step_fmt} (всего: {total_steps_fmt}), "
             f"{action_text}, блок не сдвинулся, штраф {reward:.2f}"
         )
     else:
         print(
-            f"\nШаг {step + 1} (всего: {total_steps + 1}), "
+            f"\nШаг {step_fmt} (всего: {total_steps_fmt}), "
             f"{action_text}, награда: {reward:.2f}"
         )
     render_pretty_colored(env)

@@ -16,6 +16,7 @@ checkpoint_freq = total_timesteps_default // 10
 
 final_model_path = "output/puzzle_model.zip"
 checkpoint_pattern = "output/puzzle_model_*.zip"
+levels_path = "levels/generated.json"
 
 # ----------------- CALLBACK ДЛЯ ПЕРИОДИЧЕСКОГО СОХРАНЕНИЯ -----------------
 class SaveEveryNStepsCallback(BaseCallback):
@@ -68,7 +69,7 @@ def run(total_timesteps=total_timesteps_default):
     print("Начало тренировки...")
     os.makedirs("output", exist_ok=True)
 
-    levels = load_levels("levels/difficult.json")
+    levels = load_levels(levels_path)
     env = make_vec_env(lambda: make_env_func(levels), n_envs=n_envs)
 
     resume = False
