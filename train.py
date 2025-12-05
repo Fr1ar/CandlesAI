@@ -8,7 +8,10 @@ import os
 from env import PuzzleEnv
 from parser import load_levels
 
-n_envs = 4
+# ----------------- ПАРАМЕТРЫ -----------------
+n_envs = 4  # количество параллельных сред (ядра CPU)
+total_timesteps_default = 100_000_000
+checkpoint_freq = 10_000_000  # каждые N шагов сохранять модель
 
 # ------------------------------------------
 # CALLBACK ДЛЯ ПЕРИОДИЧЕСКОГО СОХРАНЕНИЯ
@@ -29,7 +32,6 @@ class SaveEveryNStepsCallback(BaseCallback):
                 print(f"{current_time} [Callback] Model saved to {path}")
         return True
 
-
 # ------------------------------------------
 # MULTI-LEVEL ENV
 # ------------------------------------------
@@ -44,27 +46,26 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         self.level_index = (self.level_index + 1) % len(self.levels)
         return super().reset(seed=seed, options=options)
 
-
 # ------------------------------------------
 # ФУНКЦИЯ СОЗДАНИЯ СРЕДЫ С MASKER
 # ------------------------------------------
 def make_env_func(levels):
     env = SequentialMultiLevelEnv(levels)
-    env.set_logging_enabled(n_envs==1)
+    env.set_logging_enabled(n_envs == 1)  # логируем только если одна среда
     return ActionMasker(env, lambda env: env.action_mask())
-
 
 # ------------------------------------------
 # ОСНОВНАЯ ФУНКЦИЯ
 # ------------------------------------------
-def run(total_timesteps=100_000_000, checkpoint_freq=50_000_000, resume=False):
+def run(total_timesteps=total_timesteps_default, checkpoint_freq=checkpoint_freq, resume=False):
     print("Начало тренировки...")
+    os.makedirs("output", exist_ok=True)
+
     levels = load_levels("levels/generated.json")
 
-    # Создаем векторную среду
+    # Создаем векторную среду с несколькими процессами для ускорения CPU
     env = make_vec_env(lambda: make_env_func(levels), n_envs=n_envs)
 
-    # Проверяем, есть ли сохранённая модель
     model_path = "output/puzzle_model.zip"
     if resume and os.path.exists(model_path):
         print(f"Loading existing model from {model_path}")
@@ -72,15 +73,16 @@ def run(total_timesteps=100_000_000, checkpoint_freq=50_000_000, resume=False):
         model.set_env(env)
         reset_timesteps = False
     else:
+        # MaskablePPO с многопроцессной средой
         model = MaskablePPO(
             "MlpPolicy",
             env,
             n_steps=256,
-            batch_size=n_envs*64,
+            batch_size=n_envs * 64,
             learning_rate=2.5e-4,
             ent_coef=0.12,
             n_epochs=10,
-            device="auto",
+            device="auto",  # auto -> cpu или gpu
             verbose=(0 if n_envs == 1 else 1),
         )
         reset_timesteps = True

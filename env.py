@@ -3,10 +3,32 @@ import gymnasium as gym
 from gymnasium import spaces
 from parser import parse_level, generate_default_level
 from utils import log_action, render_pretty_colored
+from numba import njit
 
 MAX_BLOCKS = 15
 FEATURES_PER_BLOCK = 6
 OBS_SIZE = MAX_BLOCKS * FEATURES_PER_BLOCK
+
+# ----------------- NUMBA COLLISION CHECK -----------------
+@njit
+def check_collision_numba(x, y, w, h, dx, dy,
+                         all_x, all_y, all_w, all_h,
+                         block_idx, num_blocks):
+    # Проверка границ
+    if x + dx < 0 or x + w + dx > 6:
+        return False
+    if y + dy < 0 or y + h + dy > 6:
+        return False
+    # Проверка столкновений с другими блоками
+    for i in range(num_blocks):
+        if i == block_idx:
+            continue
+        ox, oy, ow, oh = all_x[i], all_y[i], all_w[i], all_h[i]
+        if ox == -1:
+            continue
+        if x + dx < ox + ow and x + w + dx > ox and y + dy < oy + oh and y + h + dy > oy:
+            return False
+    return True
 
 
 class PuzzleEnv(gym.Env):
@@ -31,7 +53,6 @@ class PuzzleEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0.0, high=1.0, shape=(OBS_SIZE,), dtype=np.float32
         )
-        # Дискретные действия: MAX_BLOCKS*2 (каждый блок можно двигать в двух направлениях)
         self.action_space = spaces.Discrete(MAX_BLOCKS * 2)
 
     def set_logging_enabled(self, enabled: bool):
@@ -39,19 +60,30 @@ class PuzzleEnv(gym.Env):
 
     # ----------------- MASK FOR MaskablePPO -----------------
     def action_mask(self):
-        """
-        Returns 1D mask of length action_space.n (MAX_BLOCKS * 2).
-        Each action index corresponds to: action = block_index * 2 + direction
-        direction: 0 = backward (left/up), 1 = forward (right/down)
-        """
         mask = np.zeros(self.action_space.n, dtype=np.int8)
         block_items = list(self.blocks.items())
         num_blocks = len(block_items)
 
-        for idx in range(num_blocks):
-            block_id, _ = block_items[idx]
+        # Векторные массивы для Numba
+        all_x = np.full(MAX_BLOCKS, -1, dtype=np.int32)
+        all_y = np.full(MAX_BLOCKS, -1, dtype=np.int32)
+        all_w = np.zeros(MAX_BLOCKS, dtype=np.int32)
+        all_h = np.zeros(MAX_BLOCKS, dtype=np.int32)
+
+        for i, (bid, b) in enumerate(block_items):
+            all_x[i] = b["x"]
+            all_y[i] = b["y"]
+            all_w[i] = b["w"]
+            all_h[i] = b["h"]
+
+        for idx, (block_id, block) in enumerate(block_items):
             for direction in (0, 1):
-                if self._can_move(block_id, direction):
+                dx = (1 if direction == 1 else -1) if block["type"] == "H" else 0
+                dy = (1 if direction == 1 else -1) if block["type"] == "V" else 0
+                if check_collision_numba(block["x"], block["y"], block["w"], block["h"],
+                                         dx, dy,
+                                         all_x, all_y, all_w, all_h,
+                                         idx, num_blocks):
                     mask[idx * 2 + direction] = 1
         return mask
 
@@ -94,6 +126,7 @@ class PuzzleEnv(gym.Env):
             arr[i, 5] = is_key
         return arr.flatten()
 
+    # ----------------- helpers -----------------
     def _index_to_block_id(self, chosen_index):
         block_items = list(self.blocks.items())
         if 0 <= chosen_index < len(block_items):
@@ -111,19 +144,25 @@ class PuzzleEnv(gym.Env):
         if block["y"] + dy < 0 or block["y"] + block["h"] + dy > self.height:
             return False
 
-        # collision check
-        new_x = block["x"] + dx
-        new_y = block["y"] + dy
-        for oid, other in self.blocks.items():
-            if oid == block_id:
-                continue
-            if (new_x < other["x"] + other["w"] and
-                new_x + block["w"] > other["x"] and
-                new_y < other["y"] + other["h"] and
-                new_y + block["h"] > other["y"]):
-                return False
-        return True
+        # collision check через Numba
+        all_x = np.zeros(len(self.blocks), dtype=np.int32)
+        all_y = np.zeros(len(self.blocks), dtype=np.int32)
+        all_w = np.zeros(len(self.blocks), dtype=np.int32)
+        all_h = np.zeros(len(self.blocks), dtype=np.int32)
+        block_items = list(self.blocks.items())
+        for i, (bid, b) in enumerate(block_items):
+            all_x[i] = b["x"]
+            all_y[i] = b["y"]
+            all_w[i] = b["w"]
+            all_h[i] = b["h"]
+            if bid == block_id:
+                block_idx = i
+        return check_collision_numba(block["x"], block["y"], block["w"], block["h"],
+                                     dx, dy,
+                                     all_x, all_y, all_w, all_h,
+                                     block_idx, len(block_items))
 
+    # ----------------- move -----------------
     def _move_block(self, block_id, direction):
         block = self.blocks[block_id]
         if block["type"] == "H":
@@ -131,6 +170,7 @@ class PuzzleEnv(gym.Env):
         else:
             block["y"] += 1 if direction == 1 else -1
 
+    # ----------------- reward -----------------
     def _compute_reward(self, block_id, direction, moved, violated, is_reverse, is_solved, terminated, invalid_action=False):
         reward = 0
         if moved:
@@ -153,8 +193,8 @@ class PuzzleEnv(gym.Env):
         key = self.blocks[self.key_id]
         return key["x"] + key["w"] - 1 == (self.width - 1)
 
+    # ----------------- step -----------------
     def step(self, action):
-        # convert discrete action to block_index + direction
         if isinstance(action, (tuple, list, np.ndarray)):
             action = int(np.asarray(action).flatten()[0])
         action = int(action)
