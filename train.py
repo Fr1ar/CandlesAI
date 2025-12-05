@@ -11,7 +11,7 @@ from parser import load_levels
 
 # ----------------- ПАРАМЕТРЫ -----------------
 n_envs = 20  # количество параллельных сред (ядра CPU)
-total_timesteps_default = 1_000_000
+total_timesteps_default = 100_000_000
 checkpoint_freq = total_timesteps_default / 10  # каждые N шагов сохранять модель
 
 # ------------------------------------------
