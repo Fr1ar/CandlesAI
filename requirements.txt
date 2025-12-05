@@ -3,4 +3,3 @@ numpy>=2.0.2
 stable-baselines3>=2.7.0
 tensorboard>=2.20.0
 sb3_contrib>=2.7.0
-torch>=2.8.0
