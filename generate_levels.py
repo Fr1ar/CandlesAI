@@ -161,7 +161,7 @@ def main():
     }
 
     # ✅ СЛОЖНЫЙ — минимум 3 затора
-    for i in range(10000):
+    for i in range(1000):
         result["levels"].append(
             generate_level((11,14), (16,30), min_blockers=3)
         )

@@ -8,7 +8,7 @@ import os
 from env import PuzzleEnv
 from parser import load_levels
 
-n_envs = 20
+n_envs = 4
 
 # ------------------------------------------
 # CALLBACK ДЛЯ ПЕРИОДИЧЕСКОГО СОХРАНЕНИЯ
@@ -59,7 +59,7 @@ def make_env_func(levels):
 # ------------------------------------------
 def run(total_timesteps=100_000_000, checkpoint_freq=50_000_000, resume=False):
     print("Начало тренировки...")
-    levels = load_levels("levels/difficult.json")
+    levels = load_levels("levels/generated.json")
 
     # Создаем векторную среду
     env = make_vec_env(lambda: make_env_func(levels), n_envs=n_envs)
