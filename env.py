@@ -138,6 +138,7 @@ class PuzzleEnv(gym.Env):
 
         if self.logging_enabled:
             print("\n=== Начальное состояние уровня ===")
+            print(f"\n{self.text_level}")
             render_pretty_colored(self)
 
         return self._get_obs(), {}
