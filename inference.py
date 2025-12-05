@@ -1,8 +1,6 @@
 from sb3_contrib import MaskablePPO
 from env import PuzzleEnv
 from parser import load_levels
-from utils import render_pretty_colored
-
 
 def is_solvable_single(text_level, model, max_steps=200):
     env = PuzzleEnv(text_level=text_level, max_steps=max_steps)
@@ -11,10 +9,9 @@ def is_solvable_single(text_level, model, max_steps=200):
     for step in range(max_steps):
         # MaskablePPO требует маску при predict
         mask = env.action_mask()
-        action, _ = model.predict(obs, action_masks=mask, deterministic=True)
+        action, _ = model.predict(obs, action_masks=mask, deterministic=False)
 
         obs, reward, terminated, truncated, info = env.step(action)
-        render_pretty_colored(env)
 
         if info.get("is_success") or env._is_solved():
             print("Уровень пройден!\n")

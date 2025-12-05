@@ -136,13 +136,13 @@ class PuzzleEnv(gym.Env):
         if moved:
             reward += 0.05
         if invalid_action:
-            reward -= 0.3
+            reward -= 0.1
         if self.last_action is not None and self.last_action[0] == block_id and self.last_action[1] == direction:
-            reward += 0.10
+            reward += 0.1
         if violated:
-            reward -= 0.6
+            reward -= 3.0
         if is_reverse:
-            reward -= 0.4
+            reward -= 3.0
         if is_solved:
             reward += 10.0
         if not is_solved and terminated:
