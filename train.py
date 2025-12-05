@@ -10,9 +10,9 @@ from env import PuzzleEnv
 from parser import load_levels
 
 # ----------------- ПАРАМЕТРЫ -----------------
-n_envs = 20  # количество параллельных сред (ядра CPU)
+n_envs = 1  # количество параллельных сред
 total_timesteps_default = 100_000_000
-checkpoint_freq = total_timesteps_default // 10  # сохранять каждые 1/10 от total_timesteps
+checkpoint_freq = total_timesteps_default // 10
 
 final_model_path = "output/puzzle_model.zip"
 checkpoint_pattern = "output/puzzle_model_*.zip"
@@ -68,10 +68,11 @@ def run(total_timesteps=total_timesteps_default):
     print("Начало тренировки...")
     os.makedirs("output", exist_ok=True)
 
-    levels = load_levels("levels/generated.json")
+    levels = load_levels("levels/difficult.json")
     env = make_vec_env(lambda: make_env_func(levels), n_envs=n_envs)
 
     resume = False
+    model = None
     checkpoint_files = get_checkpoint_files()
 
     # ----- Проверка финальной модели -----
@@ -104,6 +105,7 @@ def run(total_timesteps=total_timesteps_default):
         else:
             delete_checkpoints()
             print("Старые чекпойнты удалены. Начинаем обучение с нуля.")
+            resume = False
 
     # ----- Создаем новую модель, если не продолжаем -----
     if not resume:
