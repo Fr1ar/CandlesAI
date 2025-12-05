@@ -79,6 +79,7 @@ class PuzzleEnv(gym.Env):
         self.total_steps = 0
         self.last_action = None
         self.prev_actions = []
+        self.prev_key_x = 0
         self.logging_enabled = True
 
         # ----------------- Векторные массивы для Numba -----------------
@@ -110,8 +111,8 @@ class PuzzleEnv(gym.Env):
         self.block_texts = {}
         self.key_id = None
         self.last_action = None
-        self.step_num = 0
         self.prev_actions = []
+        self.prev_key_x = 0
 
         if self.text_level is None:
             self.blocks, self.block_texts, self.key_id = generate_default_level()
@@ -168,12 +169,12 @@ class PuzzleEnv(gym.Env):
         # обновление векторных массивов
         idx = list(self.blocks.keys()).index(block_id)
         self.all_x[idx] = block["x"]
-        self.all_y[idx] = block["y"] = block["y"]
+        self.all_y[idx] = block["y"]
         self.all_w[idx] = block["w"]
         self.all_h[idx] = block["h"]
 
     # ----------------- reward -----------------
-    def _compute_reward(self, block_id, direction, moved, violated, is_reverse, is_solved, terminated, invalid_action=False):
+    def _compute_reward(self, block_id, direction, moved, violated, is_reverse, is_solved, terminated, invalid_action, is_key_moved):
         reward = 0
         if moved:
             reward -= 0.05
@@ -185,12 +186,16 @@ class PuzzleEnv(gym.Env):
             reward -= 3.0
         if is_reverse:
             reward -= 3.0
+        if is_key_moved:
+            key = self.blocks[self.key_id]
+            reward += key["x"] * 0.5
         if is_solved:
             reward += 10.0
         if not is_solved and terminated:
             reward -= 5.0
         return reward
 
+    # ----------------- is_solved -----------------
     def _is_solved(self):
         key = self.blocks[self.key_id]
         return key["x"] + key["w"] - 1 == (self.width - 1)
@@ -208,6 +213,9 @@ class PuzzleEnv(gym.Env):
         violated = False
         is_reverse = False
 
+        # сохраняем предыдущую позицию ключа
+        prev_key_x = self.prev_key_x
+
         if not invalid_action:
             is_reverse = (
                 self.last_action is not None and
@@ -220,13 +228,20 @@ class PuzzleEnv(gym.Env):
             else:
                 violated = True
 
+        # награда за продвижение ключа вправо
+        is_key_moved = False
+        key = self.blocks[self.key_id]
+        if key["x"] > prev_key_x:
+            is_key_moved = True
+            self.prev_key_x = key["x"]
+
         is_solved = self._is_solved()
         terminated = is_solved or self.step_num >= self.max_steps - 1
         truncated = False
 
         reward = self._compute_reward(
             real_block_id if real_block_id is not None else -1,
-            direction, moved, violated, is_reverse, is_solved, terminated, invalid_action
+            direction, moved, violated, is_reverse, is_solved, terminated, invalid_action, is_key_moved
         )
 
         self.prev_actions.append(f"{real_block_id}:{direction}")
