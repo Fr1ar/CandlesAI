@@ -176,11 +176,11 @@ class PuzzleEnv(gym.Env):
     def _compute_reward(self, block_id, direction, moved, violated, is_reverse, is_solved, terminated, invalid_action=False):
         reward = 0
         if moved:
-            reward += 0.05
+            reward -= 0.05
         if invalid_action:
-            reward -= 0.1
+            reward -= 1.0
         if self.last_action is not None and self.last_action[0] == block_id and self.last_action[1] == direction:
-            reward += 0.1
+            reward += 0.03
         if violated:
             reward -= 3.0
         if is_reverse:

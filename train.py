@@ -12,32 +12,30 @@ from parser import load_levels
 # ----------------- ПАРАМЕТРЫ -----------------
 n_envs = 20  # количество параллельных сред (ядра CPU)
 total_timesteps_default = 100_000_000
-checkpoint_freq = total_timesteps_default / 10  # каждые N шагов сохранять модель
+checkpoint_freq = total_timesteps_default // 10  # сохранять каждые 1/10 от total_timesteps
 
-# ------------------------------------------
-# CALLBACK ДЛЯ ПЕРИОДИЧЕСКОГО СОХРАНЕНИЯ
-# ------------------------------------------
+final_model_path = "output/puzzle_model.zip"
+checkpoint_pattern = "output/puzzle_model_*.zip"
+
+# ----------------- CALLBACK ДЛЯ ПЕРИОДИЧЕСКОГО СОХРАНЕНИЯ -----------------
 class SaveEveryNStepsCallback(BaseCallback):
     def __init__(self, save_freq: int, save_path: str, verbose=1):
         super().__init__(verbose)
         self.save_freq = save_freq
         self.save_path = save_path
-        self.last_save = 0  # последний шаг, на котором был чекпойнт
+        self.last_save = 0
 
     def _on_step(self) -> bool:
         if self.num_timesteps - self.last_save >= self.save_freq:
             self.last_save = self.num_timesteps
             now = datetime.now()
-            current_time = now.strftime("%H:%M:%S")
             path = f"{self.save_path}_{self.num_timesteps}.zip"
             self.model.save(path)
             if self.verbose:
-                print(f"{current_time} [Callback] Model saved to {path}")
+                print(f"{now.strftime('%H:%M:%S')} [Callback] Model saved to {path}")
         return True
 
-# ------------------------------------------
-# MULTI-LEVEL ENV
-# ------------------------------------------
+# ----------------- MULTI-LEVEL ENV -----------------
 class SequentialMultiLevelEnv(PuzzleEnv):
     def __init__(self, levels):
         self.levels = levels
@@ -49,44 +47,66 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         self.level_index = (self.level_index + 1) % len(self.levels)
         return super().reset(seed=seed, options=options)
 
-# ------------------------------------------
-# ФУНКЦИЯ СОЗДАНИЯ СРЕДЫ С MASKER
-# ------------------------------------------
+# ----------------- ФУНКЦИИ -----------------
 def make_env_func(levels):
     env = SequentialMultiLevelEnv(levels)
-    env.set_logging_enabled(n_envs == 1)  # логируем только если одна среда
+    env.set_logging_enabled(n_envs == 1)
     return ActionMasker(env, lambda env: env.action_mask())
 
-# ------------------------------------------
-# ОСНОВНАЯ ФУНКЦИЯ
-# ------------------------------------------
-def run(total_timesteps=total_timesteps_default, checkpoint_freq=checkpoint_freq):
+def delete_checkpoints():
+    files = glob.glob(checkpoint_pattern)
+    for f in files:
+        os.remove(f)
+    if files:
+        print(f"Удалено {len(files)} старых чекпойнтов.")
+
+def get_checkpoint_files():
+    return sorted(glob.glob(checkpoint_pattern), key=os.path.getmtime)
+
+# ----------------- ОСНОВНАЯ ФУНКЦИЯ -----------------
+def run(total_timesteps=total_timesteps_default):
     print("Начало тренировки...")
     os.makedirs("output", exist_ok=True)
 
     levels = load_levels("levels/generated.json")
-
-    # Создаем векторную среду с несколькими процессами
     env = make_vec_env(lambda: make_env_func(levels), n_envs=n_envs)
 
-    final_model_path = "output/puzzle_model.zip"
-    checkpoint_files = sorted(glob.glob("output/puzzle_model_*.zip"), key=os.path.getmtime)
-
     resume = False
+    checkpoint_files = get_checkpoint_files()
 
-    # Если есть чекпойнты, но нет финальной модели
-    if checkpoint_files and not os.path.exists(final_model_path):
-        print("Найдена незаконченная модель (чекпойнты), финальная модель отсутствует.")
-        answer = input("Хотите продолжить обучение с последнего чекпойнта? [y/N]: ").strip().lower()
+    # ----- Проверка финальной модели -----
+    if os.path.exists(final_model_path):
+        answer = input(
+            "Найдена финальная модель puzzle_model.zip. "
+            "Хотите её перезаписать? При согласии финальная модель и все чекпойнты будут удалены. [y/N]: "
+        ).strip().lower()
+        if answer == "y":
+            os.remove(final_model_path)
+            delete_checkpoints()
+            print("Финальная модель и чекпойнты удалены. Начинаем обучение с нуля.")
+        else:
+            print("Финальная модель не будет перезаписана. Выход.")
+            return
+
+    # ----- Проверка чекпойнтов, если финальной модели нет -----
+    elif checkpoint_files:
+        answer = input(
+            "Найдена незаконченная модель (чекпойнты). "
+            "Хотите продолжить обучение с последнего чекпойнта? "
+            "Если нет, старые чекпойнты будут удалены. [y/N]: "
+        ).strip().lower()
         if answer == "y":
             latest_checkpoint = checkpoint_files[-1]
             print(f"Загружаем {latest_checkpoint} для продолжения обучения...")
             model = MaskablePPO.load(latest_checkpoint)
             model.set_env(env)
             resume = True
+        else:
+            delete_checkpoints()
+            print("Старые чекпойнты удалены. Начинаем обучение с нуля.")
 
+    # ----- Создаем новую модель, если не продолжаем -----
     if not resume:
-        # Новая модель
         model = MaskablePPO(
             "MlpPolicy",
             env,
@@ -99,13 +119,13 @@ def run(total_timesteps=total_timesteps_default, checkpoint_freq=checkpoint_freq
             verbose=(0 if n_envs == 1 else 1),
         )
 
-    # Callback для периодического сохранения
+    # ----- Callback для периодического сохранения -----
     callback = SaveEveryNStepsCallback(save_freq=checkpoint_freq, save_path="output/puzzle_model")
 
-    # Обучаем / дообучаем
+    # ----- Обучение -----
     model.learn(total_timesteps=total_timesteps, callback=callback, reset_num_timesteps=not resume)
 
-    # Сохраняем финальную модель
+    # ----- Сохранение финальной модели -----
     model.save(final_model_path)
     print("Training done. Final model saved as puzzle_model.zip")
 
