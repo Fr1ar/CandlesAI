@@ -113,6 +113,7 @@ class PuzzleEnv(gym.Env):
         self.last_action = None
         self.prev_actions = []
         self.prev_key_x = 0
+        self.step_num = 0
 
         if self.text_level is None:
             self.blocks, self.block_texts, self.key_id = generate_default_level()
