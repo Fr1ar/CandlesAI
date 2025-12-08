@@ -81,6 +81,7 @@ class PuzzleEnv(gym.Env):
         self.prev_actions = []
         self.prev_key_x = 0
         self.logging_enabled = True
+        self.log_step_counter = 0
 
         # ----------------- Векторные массивы для Numba -----------------
         self.all_x = np.full(MAX_BLOCKS, -1, dtype=np.int32)
@@ -114,6 +115,7 @@ class PuzzleEnv(gym.Env):
         self.prev_actions = []
         self.prev_key_x = 0
         self.step_num = 0
+        self.log_step_counter = 0
 
         if self.text_level is None:
             self.blocks, self.block_texts, self.key_id = generate_default_level()
@@ -201,9 +203,10 @@ class PuzzleEnv(gym.Env):
         return key["x"] + key["w"] - 1 == (self.width - 1)
 
     # ----------------- step -----------------
+    # ----------------- step -----------------
     def step(self, action):
         if self.logging_enabled:
-            log_action_mask(self, action, self.step_num)
+            log_action_mask(self, action, self.log_step_counter)
 
         action = int(action)
         chosen_index = action // 2
@@ -218,13 +221,30 @@ class PuzzleEnv(gym.Env):
 
         prev_key_x = self.prev_key_x
 
+        # для подсветки предыдущей позиции блока
+        prev_pos = None
+        arrow = None
+
         if not invalid_action:
             is_reverse = (
-                self.last_action is not None and
-                self.last_action[0] == real_block_id and
-                self.last_action[1] != direction
+                    self.last_action is not None and
+                    self.last_action[0] == real_block_id and
+                    self.last_action[1] != direction
             )
             if self._can_move(real_block_id, direction):
+                # сохраняем старую позицию перед движением
+                block = self.blocks[real_block_id]
+                if block["type"] == "H":
+                    arrow = "⬅" if direction == 0 else "⮕"
+                    # если движемся влево, подсвечиваем правый край блока
+                    prev_x = block["x"] + block["w"] - 1 if direction == 0 else block["x"]
+                    prev_pos = (prev_x, block["y"])
+                else:
+                    arrow = "⬆" if direction == 0 else "⬇"
+                    # если движемся вверх, подсвечиваем нижний край блока
+                    prev_y = block["y"] + block["h"] - 1 if direction == 0 else block["y"]
+                    prev_pos = (block["x"], prev_y)
+
                 self._move_block(real_block_id, direction)
                 moved = True
             else:
@@ -248,7 +268,8 @@ class PuzzleEnv(gym.Env):
         self.prev_actions.append(f"{real_block_id}:{direction}")
 
         if self.logging_enabled:
-            log_action(action, self, moved, reward)
+            log_action(action, self, moved, reward, highlight_from=prev_pos, highlight_dir=arrow)
+            self.log_step_counter += 1
 
         self.step_num += 1
         self.total_steps += 1
@@ -257,3 +278,5 @@ class PuzzleEnv(gym.Env):
         obs = self._get_obs()
         info = {"is_success": is_solved}
         return obs, reward, terminated, truncated, info
+
+

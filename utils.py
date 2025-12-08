@@ -1,7 +1,6 @@
 import numpy as np
 
 RESET = "\033[0m"
-
 FG_BLACK = "\033[30m"
 
 # Яркие фоны
@@ -9,22 +8,23 @@ BG_BLACK_BRIGHT  = "\033[40m"
 BG_GREEN_BRIGHT  = "\033[102m"
 BG_RED_BRIGHT    = "\033[101m"
 BG_YELLOW_BRIGHT = "\033[103m"
+BG_CYAN_BRIGHT   = "\033[106m"  # яркий голубой фон
 
 FG_GRAY_DARK = "\033[90m"
+
 
 def make_cell(bg, char):
     return f"{bg}{FG_BLACK} {char} {RESET}"
 
 
-def render_pretty_colored(env):
+def render_pretty_colored(env, highlight_from=None, highlight_dir=None):
     empty = make_cell(BG_BLACK_BRIGHT, " ")
-
     grid = [[empty for _ in range(6)] for _ in range(6)]
 
+    # рисуем все блоки
     for block_id, block in env.blocks.items():
         x, y, w, h, t = block["x"], block["y"], block["w"], block["h"], block["type"]
 
-        # ID всех блоков черным
         if block_id == env.key_id:
             char = "0"
             bg = BG_YELLOW_BRIGHT
@@ -32,15 +32,19 @@ def render_pretty_colored(env):
             char = env.block_texts.get(block_id, "?")
             bg = BG_GREEN_BRIGHT if t == "H" else BG_RED_BRIGHT
 
-        cell = make_cell(bg, char)
-
         for dy in range(h):
             for dx in range(w):
                 ny, nx = y + dy, x + dx
                 if 0 <= ny < 6 and 0 <= nx < 6:
-                    grid[ny][nx] = cell
+                    grid[ny][nx] = make_cell(bg, char)
 
-    # --- рамка тёмно-серого цвета ---
+    # рисуем подсветку после всех блоков
+    if highlight_from is not None:
+        hx, hy = highlight_from
+        if 0 <= hy < 6 and 0 <= hx < 6:
+            grid[hy][hx] = make_cell(BG_CYAN_BRIGHT, highlight_dir if highlight_dir else "?")
+
+    # рамка
     top_border = f"{FG_GRAY_DARK}┌" + "───" * 6 + "┐" + RESET
     bottom_border = f"{FG_GRAY_DARK}└" + "───" * 6 + "┘" + RESET
     print(top_border)
@@ -48,16 +52,11 @@ def render_pretty_colored(env):
         print(f"{FG_GRAY_DARK}│{RESET}" + "".join(row) + f"{FG_GRAY_DARK}│{RESET}")
     print(bottom_border)
 
+
+
+
 def action_to_text(action, env):
-    """
-    Accepts action in several forms:
-      - scalar int (Discrete action)
-      - tuple/list (block_index, direction)  -- kept for compatibility
-      - numpy array
-    """
-    # normalize to (block_index, direction) and produce human-readable text
     if isinstance(action, (list, tuple)):
-        # if user passed tuple (block_idx, dir)
         block_index = int(action[0])
         direction = int(action[1]) if len(action) > 1 else 0
     elif hasattr(action, "dtype") and isinstance(action, (np.ndarray,)):
@@ -65,12 +64,10 @@ def action_to_text(action, env):
         block_index = a // 2
         direction = a % 2
     else:
-        # scalar
         a = int(action)
         block_index = a // 2
         direction = a % 2
 
-    # map block_index -> block_id (real)
     block_items = list(env.blocks.items())
     if not (0 <= block_index < len(block_items)):
         dir_str = ("влево/вверх" if direction == 0 else "вправо/вниз")
@@ -104,7 +101,7 @@ def log_action_mask(env, step, total_steps):
     for block_idx, block_id in enumerate(block_ids):
         allowed_dirs = []
 
-        block_type = env.blocks[block_id]["type"]  # "H" или "V"
+        block_type = env.blocks[block_id]["type"]
 
         for direction in (0, 1):
             action_index = block_idx * 2 + direction
@@ -119,14 +116,14 @@ def log_action_mask(env, step, total_steps):
             print(f' • Блок \'{block_name}\' можно двигать: {" ".join(allowed_dirs)}')
 
 
-def log_action(action, env, moved, reward):
+def log_action(action, env, moved, reward, highlight_from=None, highlight_dir=None):
     action_text = action_to_text(action, env)
     if not moved:
         print(f"{action_text} блок не сдвинулся, штраф {reward:.2f}")
     else:
         print(f"{action_text} (награда: {reward:.2f})")
 
-    render_pretty_colored(env)
+    render_pretty_colored(env, highlight_from=highlight_from, highlight_dir=highlight_dir)
     print("-" * 40)
 
 def log_level(env, text_level):
