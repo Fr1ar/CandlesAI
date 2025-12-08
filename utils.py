@@ -1,3 +1,5 @@
+import numpy as np
+
 RESET = "\033[0m"
 
 FG_BLACK = "\033[30m"
@@ -80,11 +82,7 @@ def action_to_text(action, env):
         return f"Блок {block_id} не найден"
 
     char = "0" if block_id == env.key_id else env.block_texts.get(block_id, "?")
-    type_str = (
-        "ключ" if block_id == env.key_id
-        else "горизонтальная свеча" if block["type"] == "H"
-        else "вертикальная свеча"
-    )
+    type_str = ("ключ" if block_id == env.key_id else "блок")
 
     if block["type"] == "H":
         dir_str = "влево" if direction == 0 else "вправо"
@@ -94,20 +92,46 @@ def action_to_text(action, env):
     return f"Двигаем {type_str} '{char}' {dir_str}"
 
 
-def log_action(action, env, moved, step, total_steps, reward):
-    action_text = action_to_text(action, env)
-
+def log_action_mask(env, step, total_steps):
     step_fmt = f"{step + 1:,}"
     total_steps_fmt = f"{total_steps + 1:,}"
 
+    print(f"Шаг {step_fmt} (всего: {total_steps_fmt})")
+
+    mask = env.action_mask()
+    block_ids = list(env.blocks.keys())
+
+    for block_idx, block_id in enumerate(block_ids):
+        allowed_dirs = []
+
+        block_type = env.blocks[block_id]["type"]  # "H" или "V"
+
+        for direction in (0, 1):
+            action_index = block_idx * 2 + direction
+            if mask[action_index]:
+                if block_type == "H":
+                    allowed_dirs.append("⬅" if direction == 0 else "⮕")
+                else:
+                    allowed_dirs.append("⬆" if direction == 0 else "⬇")
+
+        if allowed_dirs:
+            block_name = env.block_texts.get(block_id, str(block_id))
+            print(f' • Блок "{block_name}" можно двигать: {" ".join(allowed_dirs)}')
+
+
+def log_action(action, env, moved, step, total_steps, reward):
+    action_text = action_to_text(action, env)
+    log_action_mask(env, step, total_steps)
+
     if not moved:
-        print(
-            f"\nШаг {step_fmt} (всего: {total_steps_fmt}), "
-            f"{action_text}, блок не сдвинулся, штраф {reward:.2f}"
-        )
+        print(f"{action_text}, блок не сдвинулся, штраф {reward:.2f}")
     else:
-        print(
-            f"\nШаг {step_fmt} (всего: {total_steps_fmt}), "
-            f"{action_text}, награда: {reward:.2f}"
-        )
+        print(f"{action_text}, награда: {reward:.2f}")
+
     render_pretty_colored(env)
+    print("-" * 40)
+
+def log_level(env, text_level):
+    print(f"УРОВЕНЬ: \"{text_level}\"")
+    render_pretty_colored(env)
+    print("-" * 40)

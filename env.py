@@ -2,7 +2,7 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 from parser import parse_level, generate_default_level
-from utils import log_action, render_pretty_colored
+from utils import log_action, render_pretty_colored, log_level
 from numba import njit
 
 MAX_BLOCKS = 15
@@ -137,9 +137,7 @@ class PuzzleEnv(gym.Env):
             self.is_key_flags[i] = 1 if bid == self.key_id else 0
 
         if self.logging_enabled:
-            print("\n=== Начальное состояние уровня ===")
-            print(f"\n{self.text_level}")
-            render_pretty_colored(self)
+            log_level(self, self.text_level)
 
         return self._get_obs(), {}
 
