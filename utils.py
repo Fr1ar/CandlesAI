@@ -2,19 +2,20 @@ import numpy as np
 
 RESET = "\033[0m"
 FG_BLACK = "\033[30m"
+FG_WHITE = "\033[97m"
 
 # Яркие фоны
 BG_BLACK_BRIGHT  = "\033[40m"
 BG_GREEN_BRIGHT  = "\033[102m"
 BG_RED_BRIGHT    = "\033[101m"
 BG_YELLOW_BRIGHT = "\033[103m"
-BG_CYAN_BRIGHT   = "\033[106m"  # яркий голубой фон
 
 FG_GRAY_DARK = "\033[90m"
 
 
-def make_cell(bg, char):
-    return f"{bg}{FG_BLACK}{char:^3}{RESET}"
+def make_cell(bg, char, fg_color=FG_BLACK):
+    # Центрируем символ в клетке шириной 3
+    return f"{bg}{fg_color}{char:^3}{RESET}"
 
 
 def render_pretty_colored(env, prev_block_pos=None, direction=None):
@@ -41,19 +42,27 @@ def render_pretty_colored(env, prev_block_pos=None, direction=None):
     # рисуем подсветку после всех блоков
     if prev_block_pos is not None:
         if prev_block_pos["type"] == "H":
-            prev_direction = "⬅" if direction == 0 else "⮕"
             # если движемся влево, подсвечиваем правый край блока
-            prev_x = prev_block_pos["x"] + prev_block_pos["w"] - 1 if direction == 0 else prev_block_pos["x"]
+            if direction == 0:
+                prev_direction = "⬅"
+                prev_x = prev_block_pos["x"] + prev_block_pos["w"] - 1
+            else:
+                prev_direction = "⮕"
+                prev_x = prev_block_pos["x"]
             prev_pos = (prev_x, prev_block_pos["y"])
         else:
-            prev_direction = "⬆" if direction == 0 else "⬇"
             # если движемся вверх, подсвечиваем нижний край блока
-            prev_y = prev_block_pos["y"] + prev_block_pos["h"] - 1 if direction == 0 else prev_block_pos["y"]
+            if direction == 0:
+                prev_direction = "⬆"
+                prev_y = prev_block_pos["y"] + prev_block_pos["h"] - 1
+            else:
+                prev_direction = "⬇"
+                prev_y = prev_block_pos["y"]
             prev_pos = (prev_block_pos["x"], prev_y)
-        hx, hy = prev_pos
 
+        hx, hy = prev_pos
         if 0 <= hy < 6 and 0 <= hx < 6:
-            grid[hy][hx] = make_cell(BG_CYAN_BRIGHT, prev_direction if prev_direction else "?")
+            grid[hy][hx] = make_cell(BG_BLACK_BRIGHT, prev_direction, fg_color=FG_WHITE)
 
     # рамка
     top_border = f"{FG_GRAY_DARK}┌" + "───" * 6 + "┐" + RESET
@@ -134,6 +143,7 @@ def log_action(action, env, moved, reward, prev_block_pos=None, direction=None):
 
     render_pretty_colored(env, prev_block_pos, direction)
     print("-" * 40)
+
 
 def log_level(env, text_level):
     print(f"УРОВЕНЬ: \"{text_level}\"")

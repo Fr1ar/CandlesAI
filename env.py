@@ -230,7 +230,7 @@ class PuzzleEnv(gym.Env):
             )
             if self._can_move(real_block_id, direction):
                 # сохраняем старую позицию перед движением
-                prev_block_pos = self.blocks[real_block_id]
+                prev_block_pos = dict(self.blocks[real_block_id])
                 self._move_block(real_block_id, direction)
                 moved = True
             else:
