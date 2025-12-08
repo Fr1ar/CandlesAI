@@ -80,7 +80,6 @@ class PuzzleEnv(gym.Env):
         self.last_action = None
         self.prev_key_x = 0
         self.logging_enabled = True
-        self.log_step_counter = 0
 
         # ----------------- Векторные массивы для Numba -----------------
         self.all_x = np.full(MAX_BLOCKS, -1, dtype=np.int32)
@@ -113,7 +112,6 @@ class PuzzleEnv(gym.Env):
         self.last_action = None
         self.prev_key_x = 0
         self.step_num = 0
-        self.log_step_counter = 0
 
         if self.text_level is None:
             self.blocks, self.block_texts, self.key_id = generate_default_level()
@@ -204,7 +202,7 @@ class PuzzleEnv(gym.Env):
     # ----------------- step -----------------
     def step(self, action):
         if self.logging_enabled:
-            log_action_mask(self, action, self.log_step_counter)
+            log_action_mask(self, action, self.step_num)
 
         action = int(action)
         chosen_index = action // 2
@@ -253,7 +251,6 @@ class PuzzleEnv(gym.Env):
 
         if self.logging_enabled:
             log_action(action, self, moved, reward, prev_block_pos, direction)
-            self.log_step_counter += 1
 
         self.step_num += 1
         self.total_steps += 1
