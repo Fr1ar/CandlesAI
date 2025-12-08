@@ -202,7 +202,7 @@ class PuzzleEnv(gym.Env):
     # ----------------- step -----------------
     def step(self, action):
         if self.logging_enabled:
-            log_action_mask(self, action, self.step_num)
+            log_action_mask(self, self.step_num, self.total_steps)
 
         action = int(action)
         chosen_index = action // 2
