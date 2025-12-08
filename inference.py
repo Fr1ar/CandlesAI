@@ -1,33 +1,43 @@
 from sb3_contrib import MaskablePPO
 from env import PuzzleEnv
 from parser import load_levels
+from sb3_contrib.common.wrappers import ActionMasker
+import numpy as np
 
-def is_solvable_single(text_level, model, max_steps=200):
+
+def is_solvable_single(text_level, model_path, max_steps=200):
     env = PuzzleEnv(text_level=text_level, max_steps=max_steps)
     obs, _ = env.reset()
 
+    # загружаем модель без env
+    model = MaskablePPO.load(model_path)
+
     for step in range(max_steps):
+        # --- получаем маску допустимых действий ---
         mask = env.action_mask()
-        action, _ = model.predict(obs, action_masks=mask, deterministic=False)
+
+        # --- предсказание с маской ---
+        action, _ = model.predict(obs, action_masks=mask, deterministic=True)
+
         obs, reward, terminated, truncated, info = env.step(action)
 
-        if info.get("is_success") or env._is_solved():
+        if info.get("is_success"):
             print("✅ Уровень пройден!\n")
             return True
+
+        if terminated:
+            break
 
     print("❌ Нет решения.\n")
     return False
 
 
 def check_all_levels(levels, model_path="output/puzzle_model", max_steps=200):
-    model = MaskablePPO.load(model_path)
-
     results = []
     for i, level in enumerate(levels):
         print(f"\n=== Уровень {i+1}/{len(levels)} ===")
-        ok = is_solvable_single(level, model, max_steps=max_steps)
+        ok = is_solvable_single(level, model_path, max_steps=max_steps)
         results.append((i, ok))
-
     return results
 
 

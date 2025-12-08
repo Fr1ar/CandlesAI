@@ -2,7 +2,7 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 from parser import parse_level, generate_default_level
-from utils import log_action, render_pretty_colored, log_level
+from utils import log_action, log_level, log_action_mask
 from numba import njit
 
 MAX_BLOCKS = 15
@@ -202,6 +202,9 @@ class PuzzleEnv(gym.Env):
 
     # ----------------- step -----------------
     def step(self, action):
+        if self.logging_enabled:
+            log_action_mask(self, action, self.step_num)
+
         action = int(action)
         chosen_index = action // 2
         direction = action % 2
@@ -213,7 +216,6 @@ class PuzzleEnv(gym.Env):
         violated = False
         is_reverse = False
 
-        # сохраняем предыдущую позицию ключа
         prev_key_x = self.prev_key_x
 
         if not invalid_action:
@@ -228,7 +230,6 @@ class PuzzleEnv(gym.Env):
             else:
                 violated = True
 
-        # награда за продвижение ключа вправо
         is_key_moved = False
         key = self.blocks[self.key_id]
         if key["x"] > prev_key_x:
@@ -247,7 +248,7 @@ class PuzzleEnv(gym.Env):
         self.prev_actions.append(f"{real_block_id}:{direction}")
 
         if self.logging_enabled:
-            log_action(action, self, moved, self.step_num, self.total_steps, reward)
+            log_action(action, self, moved, reward)
 
         self.step_num += 1
         self.total_steps += 1

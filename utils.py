@@ -85,11 +85,11 @@ def action_to_text(action, env):
     type_str = ("ключ" if block_id == env.key_id else "блок")
 
     if block["type"] == "H":
-        dir_str = "влево" if direction == 0 else "вправо"
+        dir_str = "⬅" if direction == 0 else "⮕"
     else:
-        dir_str = "вверх" if direction == 0 else "вниз"
+        dir_str = "⬆" if direction == 0 else "⬇"
 
-    return f"Двигаем {type_str} '{char}' {dir_str}"
+    return f"Двигаем {type_str} '{char}' {dir_str} "
 
 
 def log_action_mask(env, step, total_steps):
@@ -116,17 +116,15 @@ def log_action_mask(env, step, total_steps):
 
         if allowed_dirs:
             block_name = env.block_texts.get(block_id, str(block_id))
-            print(f' • Блок "{block_name}" можно двигать: {" ".join(allowed_dirs)}')
+            print(f' • Блок \'{block_name}\' можно двигать: {" ".join(allowed_dirs)}')
 
 
-def log_action(action, env, moved, step, total_steps, reward):
+def log_action(action, env, moved, reward):
     action_text = action_to_text(action, env)
-    log_action_mask(env, step, total_steps)
-
     if not moved:
-        print(f"{action_text}, блок не сдвинулся, штраф {reward:.2f}")
+        print(f"{action_text} блок не сдвинулся, штраф {reward:.2f}")
     else:
-        print(f"{action_text}, награда: {reward:.2f}")
+        print(f"{action_text} (награда: {reward:.2f})")
 
     render_pretty_colored(env)
     print("-" * 40)
