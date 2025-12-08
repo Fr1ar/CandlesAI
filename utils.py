@@ -44,19 +44,19 @@ def render_pretty_colored(env, prev_block_pos=None, direction=None):
         if prev_block_pos["type"] == "H":
             # если движемся влево, подсвечиваем правый край блока
             if direction == 0:
-                prev_direction = "⬅"
+                prev_direction = "⏴"
                 prev_x = prev_block_pos["x"] + prev_block_pos["w"] - 1
             else:
-                prev_direction = "⮕"
+                prev_direction = "⏵"
                 prev_x = prev_block_pos["x"]
             prev_pos = (prev_x, prev_block_pos["y"])
         else:
             # если движемся вверх, подсвечиваем нижний край блока
             if direction == 0:
-                prev_direction = "⬆"
+                prev_direction = "▲"
                 prev_y = prev_block_pos["y"] + prev_block_pos["h"] - 1
             else:
-                prev_direction = "⬇"
+                prev_direction = "▼"
                 prev_y = prev_block_pos["y"]
             prev_pos = (prev_block_pos["x"], prev_y)
 
