@@ -14,10 +14,10 @@ FG_GRAY_DARK = "\033[90m"
 
 
 def make_cell(bg, char):
-    return f"{bg}{FG_BLACK} {char} {RESET}"
+    return f"{bg}{FG_BLACK}{char:^3}{RESET}"
 
 
-def render_pretty_colored(env, highlight_from=None, highlight_dir=None):
+def render_pretty_colored(env, prev_block_pos=None, direction=None):
     empty = make_cell(BG_BLACK_BRIGHT, " ")
     grid = [[empty for _ in range(6)] for _ in range(6)]
 
@@ -39,10 +39,21 @@ def render_pretty_colored(env, highlight_from=None, highlight_dir=None):
                     grid[ny][nx] = make_cell(bg, char)
 
     # рисуем подсветку после всех блоков
-    if highlight_from is not None:
-        hx, hy = highlight_from
+    if prev_block_pos is not None:
+        if prev_block_pos["type"] == "H":
+            prev_direction = "⬅" if direction == 0 else "⮕"
+            # если движемся влево, подсвечиваем правый край блока
+            prev_x = prev_block_pos["x"] + prev_block_pos["w"] - 1 if direction == 0 else prev_block_pos["x"]
+            prev_pos = (prev_x, prev_block_pos["y"])
+        else:
+            prev_direction = "⬆" if direction == 0 else "⬇"
+            # если движемся вверх, подсвечиваем нижний край блока
+            prev_y = prev_block_pos["y"] + prev_block_pos["h"] - 1 if direction == 0 else prev_block_pos["y"]
+            prev_pos = (prev_block_pos["x"], prev_y)
+        hx, hy = prev_pos
+
         if 0 <= hy < 6 and 0 <= hx < 6:
-            grid[hy][hx] = make_cell(BG_CYAN_BRIGHT, highlight_dir if highlight_dir else "?")
+            grid[hy][hx] = make_cell(BG_CYAN_BRIGHT, prev_direction if prev_direction else "?")
 
     # рамка
     top_border = f"{FG_GRAY_DARK}┌" + "───" * 6 + "┐" + RESET
@@ -51,8 +62,6 @@ def render_pretty_colored(env, highlight_from=None, highlight_dir=None):
     for row in grid:
         print(f"{FG_GRAY_DARK}│{RESET}" + "".join(row) + f"{FG_GRAY_DARK}│{RESET}")
     print(bottom_border)
-
-
 
 
 def action_to_text(action, env):
@@ -116,14 +125,14 @@ def log_action_mask(env, step, total_steps):
             print(f' • Блок \'{block_name}\' можно двигать: {" ".join(allowed_dirs)}')
 
 
-def log_action(action, env, moved, reward, highlight_from=None, highlight_dir=None):
+def log_action(action, env, moved, reward, prev_block_pos=None, direction=None):
     action_text = action_to_text(action, env)
     if not moved:
         print(f"{action_text} блок не сдвинулся, штраф {reward:.2f}")
     else:
         print(f"{action_text} (награда: {reward:.2f})")
 
-    render_pretty_colored(env, highlight_from=highlight_from, highlight_dir=highlight_dir)
+    render_pretty_colored(env, prev_block_pos, direction)
     print("-" * 40)
 
 def log_level(env, text_level):

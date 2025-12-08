@@ -78,7 +78,6 @@ class PuzzleEnv(gym.Env):
         self.step_num = 0
         self.total_steps = 0
         self.last_action = None
-        self.prev_actions = []
         self.prev_key_x = 0
         self.logging_enabled = True
         self.log_step_counter = 0
@@ -112,7 +111,6 @@ class PuzzleEnv(gym.Env):
         self.block_texts = {}
         self.key_id = None
         self.last_action = None
-        self.prev_actions = []
         self.prev_key_x = 0
         self.step_num = 0
         self.log_step_counter = 0
@@ -222,8 +220,7 @@ class PuzzleEnv(gym.Env):
         prev_key_x = self.prev_key_x
 
         # для подсветки предыдущей позиции блока
-        prev_pos = None
-        arrow = None
+        prev_block_pos = None
 
         if not invalid_action:
             is_reverse = (
@@ -233,18 +230,7 @@ class PuzzleEnv(gym.Env):
             )
             if self._can_move(real_block_id, direction):
                 # сохраняем старую позицию перед движением
-                block = self.blocks[real_block_id]
-                if block["type"] == "H":
-                    arrow = "⬅" if direction == 0 else "⮕"
-                    # если движемся влево, подсвечиваем правый край блока
-                    prev_x = block["x"] + block["w"] - 1 if direction == 0 else block["x"]
-                    prev_pos = (prev_x, block["y"])
-                else:
-                    arrow = "⬆" if direction == 0 else "⬇"
-                    # если движемся вверх, подсвечиваем нижний край блока
-                    prev_y = block["y"] + block["h"] - 1 if direction == 0 else block["y"]
-                    prev_pos = (block["x"], prev_y)
-
+                prev_block_pos = self.blocks[real_block_id]
                 self._move_block(real_block_id, direction)
                 moved = True
             else:
@@ -265,10 +251,8 @@ class PuzzleEnv(gym.Env):
             direction, moved, violated, is_reverse, is_solved, terminated, invalid_action, is_key_moved
         )
 
-        self.prev_actions.append(f"{real_block_id}:{direction}")
-
         if self.logging_enabled:
-            log_action(action, self, moved, reward, highlight_from=prev_pos, highlight_dir=arrow)
+            log_action(action, self, moved, reward, prev_block_pos, direction)
             self.log_step_counter += 1
 
         self.step_num += 1
