@@ -10,6 +10,8 @@ pip install -r requirements.txt
 Запуск тренировки модели:
 ```bash
 python train.py
+# Чтобы ноутбук не засыпал:
+caffeinate -dims python train.py
 ```
 
 Запуск решения головоломки:
