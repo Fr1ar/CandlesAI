@@ -26,16 +26,24 @@ class SaveEveryNStepsCallback(BaseCallback):
         self.save_freq = save_freq
         self.save_path = save_path
         self.last_save = 0
+        self.last_log_timestep = 0
 
     def _on_step(self) -> bool:
+        if self.num_timesteps - self.last_log_timestep >= 100_000:
+            self._log(f"Step = {self.num_timesteps + 1:,}")
+            self.last_log_timestep = self.num_timesteps
+
         if self.num_timesteps - self.last_save >= self.save_freq:
             self.last_save = self.num_timesteps
-            now = datetime.now()
             path = f"{self.save_path}_{self.num_timesteps}.zip"
             self.model.save(path)
-            if self.verbose:
-                print(f"{now.strftime('%H:%M:%S')} [Callback] Model saved to {path}")
+            self._log(f"Model saved to {path}")
         return True
+
+    def _log(self, text):
+        if self.verbose:
+            now = datetime.now()
+            print(f"{now.strftime('%H:%M:%S')} {text}")
 
 
 # ----------------- MULTI-LEVEL ENV -----------------
@@ -133,7 +141,7 @@ def run(total_timesteps=total_timesteps_default):
             ent_coef=0.12,
             n_epochs=10,
             device="auto",
-            verbose=(0 if n_envs == 1 else 1),
+            verbose=0,  # (0 if n_envs == 1 else 1),
         )
 
     # ----- Callback для периодического сохранения -----
