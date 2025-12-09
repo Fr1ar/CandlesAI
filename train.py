@@ -10,7 +10,7 @@ from env import PuzzleEnv
 from parser import load_levels
 
 # ----------------- ПАРАМЕТРЫ -----------------
-n_envs = 24  # количество параллельных сред
+n_envs = 12  # количество параллельных сред
 total_timesteps_default = 3_000_000_000
 checkpoint_freq = total_timesteps_default // 30
 
