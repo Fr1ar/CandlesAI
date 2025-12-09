@@ -28,10 +28,12 @@ levels_path = "levels/generated.json"
 total_timesteps_default = int(total_timesteps)
 checkpoint_freq = int(total_timesteps_default // checkpoint_count)
 
+
 # ----------------------------------------------
 def log(text):
     now = datetime.now()
     print(f"{now.strftime('%H:%M:%S')} {text}")
+
 
 # ----------------- CALLBACK ДЛЯ ПЕРИОДИЧЕСКОГО СОХРАНЕНИЯ -----------------
 class SaveEveryNStepsCallback(BaseCallback):
@@ -55,7 +57,8 @@ class SaveEveryNStepsCallback(BaseCallback):
         return True
 
     def _log(self, text):
-        if self.verbose: log(text)
+        if self.verbose:
+            log(text)
 
 
 # ----------------- MULTI-LEVEL ENV -----------------
