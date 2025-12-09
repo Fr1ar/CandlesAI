@@ -1,0 +1,62 @@
+{
+  "elementary": [
+    "- - - - - -.- - - c - f.0 0 - c - f.- - - c - f.- u u u - -.- - - - - -",
+    "k k - - - -.- - - - - -.0 0 - - e -.- - - - e -.- l l - - -.- - - - - -",
+    "- - - s s -.- - - - - -.- 0 0 - v -.- - - - v -.- - - - v -.- - - - - -",
+    "- - - - - -.w j j - l -.w 0 0 - l -.w - - - - -.- - - - - -.p p p p - -",
+    "- - - - - -.- - - - - -.- 0 0 - j -.- - - - j -.- - - - - -.- p p p - -",
+    "- - - - - -.p - u u - -.p 0 0 - h -.p - - - h -.p - - - h -.- a a a - -",
+    "- - - - - w.- - - d - w.0 0 - d - w.- t t - - -.- - - - - -.- - - - - -",
+    "- - - - - -.- - - z - -.- 0 0 z - o.j j - z - o.- - - - - -.- - - - - -",
+    "- - - - - -.- - - - - -.- 0 0 - u -.- - - - u -.- - - - u -.- m m m m -",
+    "- - - - - h.- - - j - h.0 0 - j - h.- y y y - -.- - - - - -.- - - - - -"
+  ],
+  "easy": [
+    "- - - z - -.c c - z - -.- 0 0 z k -.- - - - k -.e - o o o -.e - - - - -",
+    "- - - - - -.- - - - - d.- 0 0 g - d.a a a g - d.- - - - - -.m m m - - -",
+    "- - - - i -.- f f k i z.0 0 - k i z.o o o k - z.- - y y y -.- - - - - -",
+    "- - - - - -.- - - - l -.0 0 g - l k.- - g - l k.p p p p - k.- - - - r r",
+    "- - w w w w.- - - z - -.- 0 0 z - q.e e - - - q.- - - - - q.- - - - - -",
+    "- t t t t -.- - - q - z.- 0 0 q - z.- - - - - -.- - s s - -.- - - - - -",
+    "- - p p p p.- - b b b b.r 0 0 - v -.r - - - v -.r - - - v -.r - - c c -",
+    "- - - - - -.- - - x x x.- 0 0 b - a.l l l b w a.- - - b w a.- - - - - -",
+    "o - - - b b.o - - - r -.o 0 0 - r -.o - e e e e.- - - - u u.- - - - - -",
+    "- - - - - -.- p p p - -.l 0 0 - o -.l - - - o h.l - - - o h.l - t t t t"
+  ],
+  "medium": [
+    "- - - t z -.- - - t z -.- 0 0 t z -.h a a a - -.h - - e e n.h - o o o n",
+    "- - h h - -.k - - - c m.k 0 0 - c m.k i i - c m.- - - f f f.v v v v - -",
+    "- a a - n -.o o o o n -.- 0 0 - n -.j - - i i i.j - - - - -.j h h h - -",
+    "- - y y - m.w l l - o m.w 0 0 - o m.w e v v v v.- e d d d -.- e - - - -",
+    "- - t t t -.- x x x u -.p 0 0 - u z.p - h h h z.p o - - - z.- o - f f f",
+    "- - - - - -.- - - l - -.- 0 0 l t w.k k k l t w.- u u u t w.- - - a a -",
+    "w w w x - -.- - - x s -.- 0 0 x s l.- - - - s l.- j j - - -.o o o - - -",
+    "- - - - - -.x - f f f -.x 0 0 s - k.x q q s - k.x - h h h k.- - - - - -",
+    "- f f - - s.- - u - p s.0 0 u - p -.- - u k k -.- m m m - x.- - - - - x",
+    "e v v v - -.e - - - c n.- 0 0 - c n.- z z z c n.- r r - - -.- - - - - -"
+  ],
+  "hard": [
+    "- a a - y -.j j j j y -.i 0 0 - y -.i - - z z z.i - - - - -.i - q q q q",
+    "- - - - y o.j j - n y o.0 0 - n y o.i f f f f -.i - - q q q.- - u u - -",
+    "- - - - t h.o o - m t h.b 0 0 m - h.b - - m d d.b g g - - -.b u u u - -",
+    "- h h h h -.l l - - - g.0 0 - e s g.t - - e s g.t - v v v -.t - x x x -",
+    "- - n n n -.- - v y z z.0 0 v y u -.- - v - u a.- m m m - a.j j j - - a",
+    "n n n - k y.e e e e k y.- 0 0 - k y.- - - q q q.h h h h - -.- z z z - -",
+    "z z z - - -.j - a a a a.j 0 0 t s q.j - - t s q.j - - x x x.- p p p p -",
+    "r r r r d -.- - y y d o.q 0 0 - d o.q - - b b b.q z z z - -.- - - - e e",
+    "o o o o j z.h t t - j z.h 0 0 - j z.e e e e - -.- c c c c -.- - - f f f",
+    "i i i i s k.- - - - s k.- 0 0 - s k.c - f f f -.c q - e e e.- q d d - -"
+  ],
+  "very_hard": [
+    "- h h h h z.q q q q - z.u 0 0 - s z.u a v - s -.u a v p p p.- o o f f f",
+    "a a a - b b.- j j j t g.0 0 - - t g.- f s s s s.- f - d d -.- y y y y -",
+    "p u u u u y.p - k k - y.0 0 - w - y.t - - w q q.t g g g - -.r r - z z z",
+    "b m m m - t.b - - d g t.b 0 0 d g t.b - q q i i.- n n u - -.p p p u - -",
+    "v v v v s c.m h h - s c.m 0 0 - s c.e f a a - -.e f - l l l.- f - o o o",
+    "f f - - x -.- t t p x v.- 0 0 p x v.k k k k - v.n - q q q q.n - e e e -",
+    "- - w w i -.r r - - i s.- 0 0 - i s.k - v v v v.k - - a a a.- q q q q -",
+    "- - n n n i.y y - p q i.g 0 0 p q i.g - a d d d.g - a j j j.- e e u u -",
+    "z - - - l l.z - - b b b.- 0 0 f t -.i - - f t -.i h h h p p.e e e e - -",
+    "- - l l l t.q q q x j t.- 0 0 x j t.b b b b j -.- - - y y y.- - - g g -"
+  ]
+}

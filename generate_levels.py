@@ -1,5 +1,6 @@
 import random, json, string
 from collections import deque, namedtuple
+import os
 
 WIDTH = HEIGHT = 6
 KEY_ID = "0"
@@ -197,16 +198,27 @@ def min_solution_steps(blocks):
     return None
 
 
-# ------------------------ Массовая генерация ------------------------
+# ------------------------ Массовая генерация с автообновлением файла ------------------------
 
 
-def generate_levels(settings):
-    result = {}
+def generate_levels(settings, file_path):
+    result = {s["name"]: [] for s in settings}
+
+    # если файл существует, загружаем промежуточные уровни
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            try:
+                existing = json.load(f)
+                for k in existing:
+                    if k in result:
+                        result[k] = existing[k]
+            except:
+                pass
+
     for s in settings:
         name = s["name"]
-        result[name] = []
         print(f"Generating {s['count']} levels for '{name}'...")
-        generated = 0
+        generated = len(result[name])
         attempts = 0
         while generated < s["count"]:
             attempts += 1
@@ -217,8 +229,12 @@ def generate_levels(settings):
                 min_steps_required = s.get("min_steps", 0)
                 steps = min_solution_steps(blocks)
                 if steps is not None and steps >= min_steps_required:
-                    result[name].append(grid_to_string(place_blocks(blocks)))
+                    level_str = grid_to_string(place_blocks(blocks))
+                    result[name].append(level_str)
                     generated += 1
+                    # сохраняем JSON после каждой генерации
+                    with open(file_path, "w", encoding="utf-8") as f:
+                        json.dump(result, f, ensure_ascii=False, indent=2)
                     print(
                         f"  ✅ Level {generated} for '{name}' generated successfully (min steps: {steps})"
                     )
@@ -229,7 +245,7 @@ def generate_levels(settings):
 # ------------------------ Пример использования ------------------------
 
 if __name__ == "__main__":
-    file_path = "levels/mega_hard.json"
+    file_path = "levels/generated_auto.json"
     N = 1000  # количество уровней на категорию
     settings = [
         {
@@ -284,9 +300,6 @@ if __name__ == "__main__":
         },
     ]
 
-    all_levels = generate_levels(settings)
-
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(all_levels, f, ensure_ascii=False, indent=2)
+    all_levels = generate_levels(settings, file_path)
 
     print(f"✅ Finished. Saved to '{file_path}'")
