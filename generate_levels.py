@@ -72,7 +72,7 @@ def generate_random_blocks_safe(min_h, max_h, min_v, max_v, min_blockers):
             return None
         lid = letters[letter_i]; letter_i += 1
         length = random.randint(BLOCK_MIN, BLOCK_MAX)
-        for attempt in range(50):  # максимум 50 попыток найти место
+        for attempt in range(50):
             if orient == 'H':
                 y = random.randint(0, HEIGHT-1)
                 x = random.randint(0, WIDTH-length)
@@ -85,7 +85,7 @@ def generate_random_blocks_safe(min_h, max_h, min_v, max_v, min_blockers):
                 if all((x,y+dy) not in used for dy in range(length)):
                     for dy in range(length): used.add((x,y+dy))
                     return Block(lid,'V',length,x,y)
-        return None  # не удалось разместить
+        return None
 
     # горизонтальные блоки
     n_h = random.randint(min_h, max_h)
@@ -125,9 +125,8 @@ def generate_random_blocks_safe(min_h, max_h, min_v, max_v, min_blockers):
         y = KEY_Y
         max_x = WIDTH - length
         if max_x < key_line_x_end:
-            continue  # нет места для блока, пробуем следующую итерацию
+            continue
         x = random.randint(key_line_x_end, max_x)
-        # проверяем, что блок не пересекается с другими
         if all((x+dx,y) not in used for dx in range(length)):
             for dx in range(length): used.add((x+dx,y))
             blocks.append(Block(lid,'H',length,x,y))
@@ -153,6 +152,24 @@ def is_solvable(blocks):
             queue.append(neigh)
     return False
 
+# ------------------------ Подсчёт минимального количества шагов ------------------------
+
+def min_solution_steps(blocks):
+    visited = set()
+    queue = deque([(blocks, 0)])
+    while queue:
+        cur, steps = queue.popleft()
+        key = next(b for b in cur if b.id==KEY_ID)
+        if key.x + KEY_LEN - 1 == WIDTH-1 and key.y == KEY_Y:
+            return steps
+        state = tuple(sorted((b.id,b.orient,b.length,b.x,b.y) for b in cur))
+        if state in visited:
+            continue
+        visited.add(state)
+        for neigh in neighbors_single_step(cur):
+            queue.append((neigh, steps + 1))
+    return None
+
 # ------------------------ Массовая генерация ------------------------
 
 def generate_levels(settings):
@@ -169,23 +186,26 @@ def generate_levels(settings):
                 s['min_h'], s['max_h'], s['min_v'], s['max_v'], s.get('min_blockers',0)
             )
             if is_solvable(blocks):
-                result[name].append(grid_to_string(place_blocks(blocks)))
-                generated += 1
-                print(f"  ✅ Level {generated} for '{name}' generated successfully")
+                min_steps_required = s.get('min_steps', 0)
+                steps = min_solution_steps(blocks)
+                if steps is not None and steps >= min_steps_required:
+                    result[name].append(grid_to_string(place_blocks(blocks)))
+                    generated += 1
+                    print(f"  ✅ Level {generated} for '{name}' generated successfully (min steps: {steps})")
         print(f"Finished '{name}' in {attempts} attempts.")
     return result
 
 # ------------------------ Пример использования ------------------------
 
 if __name__ == "__main__":
-    file_path = "levels/generated2.json"
-    N = 10  # Количество уровней на категорию
+    file_path = "levels/generated_steps.json"
+    N = 1000  # количество уровней на категорию
     settings = [
-        {"name":"elementary", "min_h":1,"max_h":2,"min_v":1,"max_v":2,"min_blockers":1,"count":N},
-        {"name":"easy", "min_h":2,"max_h":3,"min_v":2,"max_v":3,"min_blockers":1,"count":N},
-        {"name":"medium", "min_h":3,"max_h":4,"min_v":3,"max_v":4,"min_blockers":2,"count":N},
-        {"name":"hard", "min_h":4,"max_h":5,"min_v":4,"max_v":5,"min_blockers":3,"count":N},
-        {"name":"very_hard", "min_h":5,"max_h":6,"min_v":5,"max_v":6,"min_blockers":4,"count":N},
+        {"name":"elementary", "min_h":1,"max_h":2,"min_v":1,"max_v":2,"min_blockers":1,"min_steps":3,"count":N},
+        {"name":"easy", "min_h":2,"max_h":3,"min_v":2,"max_v":3,"min_blockers":1,"min_steps":5,"count":N},
+        {"name":"medium", "min_h":3,"max_h":4,"min_v":3,"max_v":4,"min_blockers":2,"min_steps":7,"count":N},
+        {"name":"hard", "min_h":4,"max_h":5,"min_v":4,"max_v":5,"min_blockers":3,"min_steps":10,"count":N},
+        {"name":"very_hard", "min_h":5,"max_h":6,"min_v":5,"max_v":6,"min_blockers":4,"min_steps":12,"count":N},
     ]
 
     all_levels = generate_levels(settings)
