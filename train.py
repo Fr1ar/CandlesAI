@@ -10,9 +10,9 @@ from env import PuzzleEnv
 from parser import load_levels
 
 # ----------------- ПАРАМЕТРЫ -----------------
-n_envs = 1  # количество параллельных сред
-total_timesteps_default = 3_000_000
-checkpoint_freq = 5_000_000 # total_timesteps_default // 30
+n_envs = 96  # количество параллельных сред
+total_timesteps_default = 3_000_000_000
+checkpoint_freq = total_timesteps_default // 30
 
 final_model_path = "output/puzzle_model.zip"
 checkpoint_pattern = "output/puzzle_model_*.zip"
