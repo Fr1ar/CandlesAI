@@ -1,5 +1,6 @@
 import json
 
+
 # Загрузка уровней из файла
 def load_levels(levels_file):
     with open(levels_file, "r", encoding="utf-8") as f:
@@ -66,8 +67,11 @@ def parse_level(text_level):
 
             # single block
             blocks[next_id] = {
-                "x": x, "y": y, "w": 1, "h": 1,
-                "type": "H" if ch == "0" else "V"
+                "x": x,
+                "y": y,
+                "w": 1,
+                "h": 1,
+                "type": "H" if ch == "0" else "V",
             }
             block_texts[next_id] = ch
             if ch == "0":

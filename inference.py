@@ -35,7 +35,7 @@ def is_solvable_single(text_level, model_path, max_steps=200):
 def check_all_levels(levels, model_path="output/puzzle_model", max_steps=200):
     results = []
     for i, level in enumerate(levels):
-        print(f"\n=== Уровень {i+1}/{len(levels)} ===")
+        print(f"\n=== Уровень {i + 1}/{len(levels)} ===")
         ok = is_solvable_single(level, model_path, max_steps=max_steps)
         results.append((i, ok))
     return results

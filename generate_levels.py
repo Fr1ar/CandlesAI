@@ -3,63 +3,73 @@ from collections import namedtuple
 from copy import deepcopy
 
 WIDTH = HEIGHT = 6
-KEY_ID = '0'
+KEY_ID = "0"
 KEY_Y = 2
 KEY_LEN = 2
 
 MIN_BLOCK = 2
 MAX_BLOCK = 4
 
-Block = namedtuple('Block', ['id', 'orient', 'length', 'x', 'y'])
+Block = namedtuple("Block", ["id", "orient", "length", "x", "y"])
 
 # ------------------- БАЗОВАЯ МЕХАНИКА -------------------
+
 
 def occupied_grid(blocks):
     grid = [[None for _ in range(WIDTH)] for __ in range(HEIGHT)]
     for b in blocks:
-        if b.orient == 'H':
+        if b.orient == "H":
             for dx in range(b.length):
-                grid[b.y][b.x+dx] = b.id
+                grid[b.y][b.x + dx] = b.id
         else:
             for dy in range(b.length):
-                grid[b.y+dy][b.x] = b.id
+                grid[b.y + dy][b.x] = b.id
     return grid
+
 
 def neighbors_single_step(blocks):
     grid = occupied_grid(blocks)
     result = []
-    for i,b in enumerate(blocks):
-        if b.orient == 'H':
-            if b.x - 1 >= 0 and grid[b.y][b.x-1] is None:
-                new = list(blocks); new[i] = Block(b.id,b.orient,b.length,b.x-1,b.y)
+    for i, b in enumerate(blocks):
+        if b.orient == "H":
+            if b.x - 1 >= 0 and grid[b.y][b.x - 1] is None:
+                new = list(blocks)
+                new[i] = Block(b.id, b.orient, b.length, b.x - 1, b.y)
                 result.append(new)
             if b.x + b.length < WIDTH and grid[b.y][b.x + b.length] is None:
-                new = list(blocks); new[i] = Block(b.id,b.orient,b.length,b.x+1,b.y)
+                new = list(blocks)
+                new[i] = Block(b.id, b.orient, b.length, b.x + 1, b.y)
                 result.append(new)
         else:
-            if b.y - 1 >= 0 and grid[b.y-1][b.x] is None:
-                new = list(blocks); new[i] = Block(b.id,b.orient,b.length,b.x,b.y-1)
+            if b.y - 1 >= 0 and grid[b.y - 1][b.x] is None:
+                new = list(blocks)
+                new[i] = Block(b.id, b.orient, b.length, b.x, b.y - 1)
                 result.append(new)
             if b.y + b.length < HEIGHT and grid[b.y + b.length][b.x] is None:
-                new = list(blocks); new[i] = Block(b.id,b.orient,b.length,b.x,b.y+1)
+                new = list(blocks)
+                new[i] = Block(b.id, b.orient, b.length, b.x, b.y + 1)
                 result.append(new)
     return result
 
+
 def place_blocks(blocks):
-    grid = [['-' for _ in range(WIDTH)] for __ in range(HEIGHT)]
+    grid = [["-" for _ in range(WIDTH)] for __ in range(HEIGHT)]
     for b in blocks:
-        if b.orient == 'H':
+        if b.orient == "H":
             for dx in range(b.length):
-                grid[b.y][b.x+dx] = b.id
+                grid[b.y][b.x + dx] = b.id
         else:
             for dy in range(b.length):
-                grid[b.y+dy][b.x] = b.id
+                grid[b.y + dy][b.x] = b.id
     return grid
 
+
 def grid_to_string(grid):
-    return '.'.join(' '.join(r) for r in grid)
+    return ".".join(" ".join(r) for r in grid)
+
 
 # ------------------- ПОИСК ЗАТОРОВ -------------------
+
 
 def count_real_blockers(blocks):
     """
@@ -77,56 +87,67 @@ def count_real_blockers(blocks):
 
     return len(blockers)
 
+
 # ------------------- ГЕНЕРАЦИЯ РЕШЁННОЙ ДОСКИ -------------------
+
 
 def build_solved_board(num_blocks):
     letters = list(string.ascii_lowercase)
     blocks = []
 
     # Ключ у выхода
-    blocks.append(Block(KEY_ID, 'H', KEY_LEN, WIDTH-KEY_LEN, KEY_Y))
-    used = {(WIDTH-1, KEY_Y), (WIDTH-2, KEY_Y)}
+    blocks.append(Block(KEY_ID, "H", KEY_LEN, WIDTH - KEY_LEN, KEY_Y))
+    used = {(WIDTH - 1, KEY_Y), (WIDTH - 2, KEY_Y)}
 
     letter_idx = 0
     while len(blocks) < num_blocks and letter_idx < len(letters):
         lid = letters[letter_idx]
         letter_idx += 1
 
-        orient = random.choice(['H','V'])
+        orient = random.choice(["H", "V"])
         length = random.randint(MIN_BLOCK, MAX_BLOCK)
 
-        if orient == 'H':
-            y = random.randint(0, HEIGHT-1)
-            x = random.randint(0, WIDTH-length)
-            if any((x+dx,y) in used for dx in range(length)): continue
+        if orient == "H":
+            y = random.randint(0, HEIGHT - 1)
+            x = random.randint(0, WIDTH - length)
+            if any((x + dx, y) in used for dx in range(length)):
+                continue
             blocks.append(Block(lid, orient, length, x, y))
-            for dx in range(length): used.add((x+dx,y))
+            for dx in range(length):
+                used.add((x + dx, y))
         else:
-            x = random.randint(0, WIDTH-1)
-            y = random.randint(0, HEIGHT-length)
-            if any((x,y+dy) in used for dy in range(length)): continue
+            x = random.randint(0, WIDTH - 1)
+            y = random.randint(0, HEIGHT - length)
+            if any((x, y + dy) in used for dy in range(length)):
+                continue
             blocks.append(Block(lid, orient, length, x, y))
-            for dy in range(length): used.add((x,y+dy))
+            for dy in range(length):
+                used.add((x, y + dy))
 
     return blocks
 
+
 # ------------------- СКРЭМБЛИНГ -------------------
+
 
 def key_x(blocks):
     return next(b.x for b in blocks if b.id == KEY_ID)
 
+
 def scramble_to_start(blocks):
-    target_x = random.choice([0,1])
+    target_x = random.choice([0, 1])
     cur = deepcopy(blocks)
 
     for _ in range(300):
         if key_x(cur) == target_x:
             return cur
         nbs = neighbors_single_step(cur)
-        if not nbs: break
+        if not nbs:
+            break
         cur = random.choice(nbs)
 
     return None
+
 
 def extra_scramble_keep_key(board, steps):
     cur = deepcopy(board)
@@ -134,11 +155,14 @@ def extra_scramble_keep_key(board, steps):
         nbs = neighbors_single_step(cur)
         kx = key_x(cur)
         nbs = [b for b in nbs if key_x(b) == kx]
-        if not nbs: break
+        if not nbs:
+            break
         cur = random.choice(nbs)
     return cur
 
+
 # ------------------- ГЕНЕРАЦИЯ УРОВНЕЙ С ЗАТОРАМИ -------------------
+
 
 def generate_level(block_range, scramble_range, min_blockers):
     while True:
@@ -153,18 +177,16 @@ def generate_level(block_range, scramble_range, min_blockers):
         if blockers >= min_blockers:
             return grid_to_string(place_blocks(scrambled))
 
+
 # ------------------- ГЛАВНАЯ ФУНКЦИЯ -------------------
 
+
 def main():
-    result = {
-        "levels": []
-    }
+    result = {"levels": []}
 
     # ✅ СЛОЖНЫЙ — минимум 3 затора
     for i in range(1000):
-        result["levels"].append(
-            generate_level((11,14), (16,30), min_blockers=3)
-        )
+        result["levels"].append(generate_level((11, 14), (16, 30), min_blockers=3))
         if i % 10 == 0:
             print(f"Уровней сгенерировано: {i}")
 
@@ -172,6 +194,7 @@ def main():
         json.dump(result, f, ensure_ascii=False, indent=2)
 
     print("✅ Файл сохранён")
+
 
 if __name__ == "__main__":
     main()

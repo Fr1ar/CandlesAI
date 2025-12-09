@@ -18,3 +18,8 @@ caffeinate -dims python train.py
 ```bash
 python inference.py
 ```
+
+Форматирование кода:
+```bash
+ruff format
+```

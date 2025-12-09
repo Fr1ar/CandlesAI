@@ -5,9 +5,9 @@ FG_BLACK = "\033[30m"
 FG_WHITE = "\033[97m"
 
 # Яркие фоны
-BG_BLACK_BRIGHT  = "\033[40m"
-BG_GREEN_BRIGHT  = "\033[102m"
-BG_RED_BRIGHT    = "\033[101m"
+BG_BLACK_BRIGHT = "\033[40m"
+BG_GREEN_BRIGHT = "\033[102m"
+BG_RED_BRIGHT = "\033[101m"
 BG_YELLOW_BRIGHT = "\033[103m"
 
 FG_GRAY_DARK = "\033[90m"
@@ -88,7 +88,7 @@ def action_to_text(action, env):
 
     block_items = list(env.blocks.items())
     if not (0 <= block_index < len(block_items)):
-        dir_str = ("влево/вверх" if direction == 0 else "вправо/вниз")
+        dir_str = "влево/вверх" if direction == 0 else "вправо/вниз"
         return f"Некорректное действие: block_index {block_index} отсутствует, направление {dir_str}"
 
     block_id = block_items[block_index][0]
@@ -97,7 +97,7 @@ def action_to_text(action, env):
         return f"Блок {block_id} не найден"
 
     char = "0" if block_id == env.key_id else env.block_texts.get(block_id, "?")
-    type_str = ("ключ" if block_id == env.key_id else "блок")
+    type_str = "ключ" if block_id == env.key_id else "блок"
 
     if block["type"] == "H":
         dir_str = "⬅" if direction == 0 else "⮕"
@@ -131,7 +131,7 @@ def log_action_mask(env, step, total_steps):
 
         if allowed_dirs:
             block_name = env.block_texts.get(block_id, str(block_id))
-            print(f' • Блок \'{block_name}\' можно двигать: {" ".join(allowed_dirs)}')
+            print(f" • Блок '{block_name}' можно двигать: {' '.join(allowed_dirs)}")
 
 
 def log_action(action, env, moved, reward, prev_block_pos=None, direction=None):
@@ -146,6 +146,6 @@ def log_action(action, env, moved, reward, prev_block_pos=None, direction=None):
 
 
 def log_level(env, text_level):
-    print(f"УРОВЕНЬ: \"{text_level}\"")
+    print(f'УРОВЕНЬ: "{text_level}"')
     render_pretty_colored(env)
     print("-" * 40)

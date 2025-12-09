@@ -10,11 +10,12 @@ FEATURES_PER_BLOCK = 6
 OBS_SIZE = MAX_BLOCKS * FEATURES_PER_BLOCK
 GRID_SIZE = 6
 
+
 # ----------------- NUMBA COLLISION CHECK -----------------
 @njit
-def check_collision_numba(x, y, w, h, dx, dy,
-                          all_x, all_y, all_w, all_h,
-                          block_idx, num_blocks):
+def check_collision_numba(
+    x, y, w, h, dx, dy, all_x, all_y, all_w, all_h, block_idx, num_blocks
+):
     if x + dx < 0 or x + w + dx > GRID_SIZE:
         return False
     if y + dy < 0 or y + h + dy > GRID_SIZE:
@@ -25,18 +26,45 @@ def check_collision_numba(x, y, w, h, dx, dy,
         ox, oy, ow, oh = all_x[i], all_y[i], all_w[i], all_h[i]
         if ox == -1:
             continue
-        if x + dx < ox + ow and x + w + dx > ox and y + dy < oy + oh and y + h + dy > oy:
+        if (
+            x + dx < ox + ow
+            and x + w + dx > ox
+            and y + dy < oy + oh
+            and y + h + dy > oy
+        ):
             return False
     return True
+
 
 # ----------------- NUMBA CAN_MOVE -----------------
 @njit
 def can_move_numba(all_x, all_y, all_w, all_h, types, idx, direction, num_blocks):
     block_type = types[idx]
-    dx = 1 if direction == 1 and block_type == 0 else (-1 if direction == 0 and block_type == 0 else 0)
-    dy = 1 if direction == 1 and block_type == 1 else (-1 if direction == 0 and block_type == 1 else 0)
-    return check_collision_numba(all_x[idx], all_y[idx], all_w[idx], all_h[idx],
-                                dx, dy, all_x, all_y, all_w, all_h, idx, num_blocks)
+    dx = (
+        1
+        if direction == 1 and block_type == 0
+        else (-1 if direction == 0 and block_type == 0 else 0)
+    )
+    dy = (
+        1
+        if direction == 1 and block_type == 1
+        else (-1 if direction == 0 and block_type == 1 else 0)
+    )
+    return check_collision_numba(
+        all_x[idx],
+        all_y[idx],
+        all_w[idx],
+        all_h[idx],
+        dx,
+        dy,
+        all_x,
+        all_y,
+        all_w,
+        all_h,
+        idx,
+        num_blocks,
+    )
+
 
 # ----------------- NUMBA ACTION MASK -----------------
 @njit
@@ -44,9 +72,12 @@ def compute_action_mask(all_x, all_y, all_w, all_h, types, num_blocks):
     mask = np.zeros(MAX_BLOCKS * 2, dtype=np.int8)
     for idx in range(num_blocks):
         for direction in (0, 1):
-            if can_move_numba(all_x, all_y, all_w, all_h, types, idx, direction, num_blocks):
+            if can_move_numba(
+                all_x, all_y, all_w, all_h, types, idx, direction, num_blocks
+            ):
                 mask[idx * 2 + direction] = 1
     return mask
+
 
 # ----------------- NUMBA GET_OBS -----------------
 @njit
@@ -61,15 +92,16 @@ def get_obs_numba(all_x, all_y, all_w, all_h, types, is_key_flags, num_blocks):
         obs[i, 5] = is_key_flags[i]
     return obs.flatten()
 
+
 # ----------------- NUMBA is_solved -----------------
 @njit
 def is_solved_numba(all_x, all_w, key_index):
     return all_x[key_index] + all_w[key_index] - 1 == GRID_SIZE - 1
 
+
 # ----------------- NUMBA reverse/invalid -----------------
 @njit
-def check_action_flags_numba(last_block_idx, last_dir,
-                             current_block_idx, current_dir):
+def check_action_flags_numba(last_block_idx, last_dir, current_block_idx, current_dir):
     invalid = 1 if current_block_idx == -1 else 0
 
     reverse = 0
@@ -79,13 +111,21 @@ def check_action_flags_numba(last_block_idx, last_dir,
 
     return invalid, reverse
 
+
 # ----------------- NUMBA reward -----------------
 @njit
-def compute_reward_numba(block_id, direction,
-                         moved, violated, reverse,
-                         solved, terminated, invalid,
-                         key_moved,
-                         key_x):
+def compute_reward_numba(
+    block_id,
+    direction,
+    moved,
+    violated,
+    reverse,
+    solved,
+    terminated,
+    invalid,
+    key_moved,
+    key_x,
+):
     reward = 0.0
 
     if moved:
@@ -115,6 +155,7 @@ def compute_reward_numba(block_id, direction,
 # ========================================================================
 # ===========================   ENV CLASS   ===============================
 # ========================================================================
+
 
 class PuzzleEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
@@ -154,8 +195,9 @@ class PuzzleEnv(gym.Env):
 
     # ----------------- action mask -----------------
     def action_mask(self):
-        return compute_action_mask(self.all_x, self.all_y, self.all_w,
-                                   self.all_h, self.types, self.num_blocks)
+        return compute_action_mask(
+            self.all_x, self.all_y, self.all_w, self.all_h, self.types, self.num_blocks
+        )
 
     # ----------------- reset -----------------
     def reset(self, seed=None, options=None):
@@ -170,7 +212,9 @@ class PuzzleEnv(gym.Env):
         if self.text_level is None:
             self.blocks, self.block_texts, self.key_id = generate_default_level()
         else:
-            self.blocks, self.block_texts, self.key_id = parse_level(text_level=self.text_level)
+            self.blocks, self.block_texts, self.key_id = parse_level(
+                text_level=self.text_level
+            )
 
         # update vector arrays
         self.num_blocks = len(self.blocks)
@@ -196,8 +240,15 @@ class PuzzleEnv(gym.Env):
 
     # ----------------- obs -----------------
     def _get_obs(self):
-        return get_obs_numba(self.all_x, self.all_y, self.all_w,
-                             self.all_h, self.types, self.is_key_flags, self.num_blocks)
+        return get_obs_numba(
+            self.all_x,
+            self.all_y,
+            self.all_w,
+            self.all_h,
+            self.types,
+            self.is_key_flags,
+            self.num_blocks,
+        )
 
     # ----------------- helpers -----------------
     def _index_to_block_id(self, chosen_index):
@@ -208,8 +259,16 @@ class PuzzleEnv(gym.Env):
 
     def _can_move(self, block_id, direction):
         idx = list(self.blocks.keys()).index(block_id)
-        return can_move_numba(self.all_x, self.all_y, self.all_w, self.all_h,
-                              self.types, idx, direction, self.num_blocks)
+        return can_move_numba(
+            self.all_x,
+            self.all_y,
+            self.all_w,
+            self.all_h,
+            self.types,
+            idx,
+            direction,
+            self.num_blocks,
+        )
 
     # ----------------- move -----------------
     def _move_block(self, block_id, direction):
@@ -289,11 +348,16 @@ class PuzzleEnv(gym.Env):
 
         # ----- Numba reward -----
         reward = compute_reward_numba(
-            current_idx, direction,
-            moved, violated, is_reverse,
-            is_solved, terminated, invalid_action,
+            current_idx,
+            direction,
+            moved,
+            violated,
+            is_reverse,
+            is_solved,
+            terminated,
+            invalid_action,
             is_key_moved,
-            key["x"]
+            key["x"],
         )
 
         if self.logging_enabled:
