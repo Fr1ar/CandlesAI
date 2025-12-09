@@ -10,14 +10,21 @@ from env import PuzzleEnv
 from parser import load_levels
 
 # ----------------- ПАРАМЕТРЫ -----------------
-n_envs = 12  # количество параллельных сред
-total_timesteps_default = 3_000_000_000
-checkpoint_freq = total_timesteps_default // 30
+# количество параллельных сред
+n_envs = 12
+# Сколько всего шагов
+total_timesteps = 3_000_000
+# Сколько чекпойнтов
+checkpoint_count = 30
+# Как часто выводить в лог количество шагов
+log_every_n_timesteps = 100_000
 
 final_model_path = "output/puzzle_model.zip"
 checkpoint_pattern = "output/puzzle_model_*.zip"
 levels_path = "levels/generated.json"
 
+total_timesteps_default = int(total_timesteps)
+checkpoint_freq = int(total_timesteps_default // checkpoint_count)
 
 # ----------------- CALLBACK ДЛЯ ПЕРИОДИЧЕСКОГО СОХРАНЕНИЯ -----------------
 class SaveEveryNStepsCallback(BaseCallback):
@@ -29,8 +36,8 @@ class SaveEveryNStepsCallback(BaseCallback):
         self.last_log_timestep = 0
 
     def _on_step(self) -> bool:
-        if self.num_timesteps - self.last_log_timestep >= 100_000:
-            self._log(f"Step = {self.num_timesteps + 1:,}")
+        if 0 < log_every_n_timesteps < self.num_timesteps - self.last_log_timestep:
+            self._log(f"step = {self.num_timesteps + 1:,}")
             self.last_log_timestep = self.num_timesteps
 
         if self.num_timesteps - self.last_save >= self.save_freq:
