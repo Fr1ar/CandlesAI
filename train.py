@@ -13,7 +13,7 @@ from parser import load_levels
 # количество параллельных сред
 n_envs = 12
 # Сколько всего шагов
-total_timesteps = 3_000_000
+total_timesteps = 3_000_000_000
 # Сколько чекпойнтов
 checkpoint_count = 30
 # Как часто выводить в лог количество шагов
