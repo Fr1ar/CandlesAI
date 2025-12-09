@@ -11,20 +11,27 @@ from parser import load_levels
 
 # ----------------- ПАРАМЕТРЫ -----------------
 # количество параллельных сред
-n_envs = 12
+n_envs = 16
 # Сколько всего шагов
-total_timesteps = 3_000_000_000
+total_timesteps = 5_000_000_000
 # Сколько чекпойнтов
-checkpoint_count = 30
+checkpoint_count = 50
 # Как часто выводить в лог количество шагов
 log_every_n_timesteps = 100_000
 
-final_model_path = "output/puzzle_model.zip"
-checkpoint_pattern = "output/puzzle_model_*.zip"
+final_model = "puzzle_model"
+final_model_file = f"{final_model}.zip"
+final_model_path = f"output/{final_model_file}"
+checkpoint_pattern = f"output/{final_model}_*.zip"
 levels_path = "levels/generated.json"
 
 total_timesteps_default = int(total_timesteps)
 checkpoint_freq = int(total_timesteps_default // checkpoint_count)
+
+# ----------------------------------------------
+def log(text):
+    now = datetime.now()
+    print(f"{now.strftime('%H:%M:%S')} {text}")
 
 # ----------------- CALLBACK ДЛЯ ПЕРИОДИЧЕСКОГО СОХРАНЕНИЯ -----------------
 class SaveEveryNStepsCallback(BaseCallback):
@@ -37,20 +44,18 @@ class SaveEveryNStepsCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if 0 < log_every_n_timesteps < self.num_timesteps - self.last_log_timestep:
-            self._log(f"step = {self.num_timesteps + 1:,}")
+            self._log(f"Шаг = {self.num_timesteps + 1:,}")
             self.last_log_timestep = self.num_timesteps
 
         if self.num_timesteps - self.last_save >= self.save_freq:
             self.last_save = self.num_timesteps
             path = f"{self.save_path}_{self.num_timesteps}.zip"
             self.model.save(path)
-            self._log(f"Model saved to {path}")
+            self._log(f"Модель сохранена в {path}")
         return True
 
     def _log(self, text):
-        if self.verbose:
-            now = datetime.now()
-            print(f"{now.strftime('%H:%M:%S')} {text}")
+        if self.verbose: log(text)
 
 
 # ----------------- MULTI-LEVEL ENV -----------------
@@ -78,7 +83,7 @@ def delete_checkpoints():
     for f in files:
         os.remove(f)
     if files:
-        print(f"Удалено {len(files)} старых чекпойнтов.")
+        log(f"Удалено {len(files)} старых чекпойнтов.")
 
 
 def get_checkpoint_files():
@@ -87,7 +92,7 @@ def get_checkpoint_files():
 
 # ----------------- ОСНОВНАЯ ФУНКЦИЯ -----------------
 def run(total_timesteps=total_timesteps_default):
-    print("Начало тренировки...")
+    log("Начало тренировки...")
     os.makedirs("output", exist_ok=True)
 
     levels = load_levels(levels_path)
@@ -110,9 +115,9 @@ def run(total_timesteps=total_timesteps_default):
         if answer == "y":
             os.remove(final_model_path)
             delete_checkpoints()
-            print("Финальная модель и чекпойнты удалены. Начинаем обучение с нуля.")
+            log("Финальная модель и чекпойнты удалены. Начинаем обучение с нуля.")
         else:
-            print("Финальная модель не будет перезаписана. Выход.")
+            log("Финальная модель не будет перезаписана. Выход.")
             return
 
     # ----- Проверка чекпойнтов, если финальной модели нет -----
@@ -128,13 +133,13 @@ def run(total_timesteps=total_timesteps_default):
         )
         if answer == "y":
             latest_checkpoint = checkpoint_files[-1]
-            print(f"Загружаем {latest_checkpoint} для продолжения обучения...")
+            log(f"Загружаем {latest_checkpoint} для продолжения обучения...")
             model = MaskablePPO.load(latest_checkpoint)
             model.set_env(env)
             resume = True
         else:
             delete_checkpoints()
-            print("Старые чекпойнты удалены. Начинаем обучение с нуля.")
+            log("Старые чекпойнты удалены. Начинаем обучение с нуля.")
             resume = False
 
     # ----- Создаем новую модель, если не продолжаем -----
@@ -165,7 +170,7 @@ def run(total_timesteps=total_timesteps_default):
 
     # ----- Сохранение финальной модели -----
     model.save(final_model_path)
-    print("Training done. Final model saved as puzzle_model.zip")
+    log(f"Тренировка завершена. Финальная модель сохранена в {final_model_file}")
 
 
 if __name__ == "__main__":
