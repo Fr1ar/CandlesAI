@@ -14,8 +14,8 @@ from parser import load_levels
 n_envs = 16
 # Сколько всего шагов
 total_timesteps = 5_000_000_000
-# Сколько чекпойнтов
-checkpoint_count = 50
+# Через сколько шагов делать чекпойнт
+checkpoint_freq = 100_000_000
 # Как часто выводить в лог количество шагов
 log_every_n_timesteps = 100_000
 
@@ -24,10 +24,6 @@ final_model_file = f"{final_model}.zip"
 final_model_path = f"output/{final_model_file}"
 checkpoint_pattern = f"output/{final_model}_*.zip"
 levels_path = "levels/generated.json"
-
-total_timesteps_default = int(total_timesteps)
-checkpoint_freq = int(total_timesteps_default // checkpoint_count)
-
 
 # ----------------------------------------------
 def log(text):
@@ -94,7 +90,7 @@ def get_checkpoint_files():
 
 
 # ----------------- ОСНОВНАЯ ФУНКЦИЯ -----------------
-def run(total_timesteps=total_timesteps_default):
+def run():
     log("Начало тренировки...")
     os.makedirs("output", exist_ok=True)
 
