@@ -25,6 +25,7 @@ final_model_path = f"output/{final_model_file}"
 checkpoint_pattern = f"output/{final_model}_*.zip"
 levels_path = "levels/generated.json"
 
+
 # ----------------------------------------------
 def log(text):
     now = datetime.now()

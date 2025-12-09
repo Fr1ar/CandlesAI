@@ -1,0 +1,44 @@
+{
+  "elementary": [
+    "- - - - - -.- - - - - n.- 0 0 - t n.g g g g t n.- - - - t -.- - - - - -",
+    "- - r - f -.- - r - f -.- 0 0 - f -.g g g g - -.- - - - - -.- - - - - -",
+    "- - - - - -.- - - q q q.- 0 0 - n -.- - - - n -.- - - - n -.- - - - - -",
+    "- - - s - -.- - - s - m.- 0 0 s - m.x x - - - m.- - - - - -.- - h h - -",
+    "- - - - n -.- - - - n -.- 0 0 - n -.s - - - - -.s - - - - -.s - - - e e"
+  ],
+  "easy": [
+    "- - - - - -.- - - l l l.- 0 0 - j -.- b - - j -.- b c c c c.- - - - - -",
+    "- - q q q -.- - - - - u.0 0 - t i u.- - - t i -.- - s s s s.h h h - - -",
+    "- - - - h -.- - c c h -.z 0 0 - h -.z - w w w w.z - - n n n.- - - - - -",
+    "- - - - - -.- - u u u u.h 0 0 e p -.h - - e p -.h g g e p -.h t t t - -",
+    "- p p - - -.- - - t - -.- 0 0 t a -.q q q t a -.- - - - - -.- - - - b b"
+  ],
+  "medium": [
+    "- n n n k f.- - - b k f.m 0 0 b - f.m - e e e e.m - z z - -.- s s s s -",
+    "- - - - z k.g g g a z k.- 0 0 a z -.- - - - - -.- c b b b b.- c - w w w",
+    "- - k k k k.x - - e - d.x 0 0 e - d.x - - e f f.x u u u v -.- - - - v -",
+    "- - g g g g.- e e e - -.0 0 - - r d.i i - - r d.- u - - r d.- u - - s s",
+    "- k k k k e.- d d - - e.f 0 0 - - e.f - - w w w.- v v b - -.- - - b - -"
+  ],
+  "hard": [
+    "f f f f x -.a - - - x d.a 0 0 - x d.a - - t t t.a i i i i -.- - - j j -",
+    "- k k k k h.- n n n z h.0 0 p - z h.- - p - z -.j j p - - -.- - u u - -",
+    "u k k k k x.u - - - w x.u 0 0 - w x.u r - p p p.- r i i i i.- - - t t t",
+    "o b b - x -.o - - r x h.- 0 0 r x h.w w - r - h.- - g g g -.y y - - - -",
+    "- - v v - h.- - - e e h.k 0 0 w - h.k - - w - -.k - a a a a.- - q q - -"
+  ],
+  "very_hard": [
+    "l l l i i i.- q q q c s.0 0 - z c s.g o o z - s.g - - j j j.g - - - - -",
+    "- - - x x x.r r k k k -.0 0 c z v n.- - c z v n.w w w z - -.- - - m m m",
+    "- - t t w i.j j j k w i.c 0 0 k w i.c - f f f -.c - - - d d.c n n n - -",
+    "v - w w q q.v n n a - i.0 0 y a f i.- - y a f g.k k k - f g.- - e e e -",
+    "l - f f f z.l - y r - z.0 0 y r - z.- p p b b b.k k - x x x.- - - - - -"
+  ],
+  "mega_hard": [
+    "n n - - w w.r h h h o t.r 0 0 - o t.b b - - o t.m s y y y y.m s - - c c",
+    "e e d d d -.- h h h c g.f 0 0 - c g.f - - p p p.l - r r r r.l o o o o -",
+    "- x x x - n.a a a r r n.y 0 0 l v n.y j j l v -.y s - f f f.y s - h h h",
+    "- s s - - b.- - z z z b.0 0 i p - b.x x i p o o.g g g - - -.- w w w w -",
+    "j e e e - -.j z z - c x.j 0 0 - c x.r r r r c x.- d h h h h.- d i i i -"
+  ]
+}
