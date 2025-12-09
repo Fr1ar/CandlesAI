@@ -57,10 +57,64 @@ def get_obs_numba(all_x, all_y, all_w, all_h, types, is_key_flags, num_blocks):
         obs[i, 1] = all_y[i] / (GRID_SIZE - 1)
         obs[i, 2] = all_w[i] / GRID_SIZE
         obs[i, 3] = all_h[i] / GRID_SIZE
-        obs[i, 4] = types[i]   # 0 = H, 1 = V
+        obs[i, 4] = types[i]
         obs[i, 5] = is_key_flags[i]
     return obs.flatten()
 
+# ----------------- NUMBA is_solved -----------------
+@njit
+def is_solved_numba(all_x, all_w, key_index):
+    return all_x[key_index] + all_w[key_index] - 1 == GRID_SIZE - 1
+
+# ----------------- NUMBA reverse/invalid -----------------
+@njit
+def check_action_flags_numba(last_block_idx, last_dir,
+                             current_block_idx, current_dir):
+    invalid = 1 if current_block_idx == -1 else 0
+
+    reverse = 0
+    if invalid == 0:
+        if last_block_idx == current_block_idx and last_dir != current_dir:
+            reverse = 1
+
+    return invalid, reverse
+
+# ----------------- NUMBA reward -----------------
+@njit
+def compute_reward_numba(block_id, direction,
+                         moved, violated, reverse,
+                         solved, terminated, invalid,
+                         key_moved,
+                         key_x):
+    reward = 0.0
+
+    if moved:
+        reward -= 0.05
+
+    if invalid:
+        reward -= 1.0
+
+    if reverse:
+        reward -= 3.0
+
+    if violated:
+        reward -= 3.0
+
+    if key_moved:
+        reward += key_x * 0.5
+
+    if solved:
+        reward += 10.0
+
+    if (not solved) and terminated:
+        reward -= 5.0
+
+    return reward
+
+
+# ========================================================================
+# ===========================   ENV CLASS   ===============================
+# ========================================================================
 
 class PuzzleEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
@@ -81,12 +135,12 @@ class PuzzleEnv(gym.Env):
         self.prev_key_x = 0
         self.logging_enabled = True
 
-        # ----------------- Векторные массивы для Numba -----------------
+        # ----------------- Numba data arrays -----------------
         self.all_x = np.full(MAX_BLOCKS, -1, dtype=np.int32)
         self.all_y = np.full(MAX_BLOCKS, -1, dtype=np.int32)
         self.all_w = np.zeros(MAX_BLOCKS, dtype=np.int32)
         self.all_h = np.zeros(MAX_BLOCKS, dtype=np.int32)
-        self.types = np.zeros(MAX_BLOCKS, dtype=np.int8)   # 0=H,1=V
+        self.types = np.zeros(MAX_BLOCKS, dtype=np.int8)
         self.is_key_flags = np.zeros(MAX_BLOCKS, dtype=np.int8)
         self.num_blocks = 0
 
@@ -98,7 +152,7 @@ class PuzzleEnv(gym.Env):
     def set_logging_enabled(self, enabled: bool):
         self.logging_enabled = enabled
 
-    # ----------------- MASK FOR MaskablePPO -----------------
+    # ----------------- action mask -----------------
     def action_mask(self):
         return compute_action_mask(self.all_x, self.all_y, self.all_w,
                                    self.all_h, self.types, self.num_blocks)
@@ -118,7 +172,7 @@ class PuzzleEnv(gym.Env):
         else:
             self.blocks, self.block_texts, self.key_id = parse_level(text_level=self.text_level)
 
-        # ----------------- обновление векторных массивов -----------------
+        # update vector arrays
         self.num_blocks = len(self.blocks)
         self.all_x.fill(-1)
         self.all_y.fill(-1)
@@ -126,6 +180,7 @@ class PuzzleEnv(gym.Env):
         self.all_h.fill(0)
         self.types.fill(0)
         self.is_key_flags.fill(0)
+
         for i, (bid, b) in enumerate(self.blocks.items()):
             self.all_x[i] = b["x"]
             self.all_y[i] = b["y"]
@@ -139,7 +194,7 @@ class PuzzleEnv(gym.Env):
 
         return self._get_obs(), {}
 
-    # ----------------- observation -----------------
+    # ----------------- obs -----------------
     def _get_obs(self):
         return get_obs_numba(self.all_x, self.all_y, self.all_w,
                              self.all_h, self.types, self.is_key_flags, self.num_blocks)
@@ -164,41 +219,17 @@ class PuzzleEnv(gym.Env):
         else:
             block["y"] += 1 if direction == 1 else -1
 
-        # обновление векторных массивов
         idx = list(self.blocks.keys()).index(block_id)
         self.all_x[idx] = block["x"]
         self.all_y[idx] = block["y"]
         self.all_w[idx] = block["w"]
         self.all_h[idx] = block["h"]
 
-    # ----------------- reward -----------------
-    def _compute_reward(self, block_id, direction, moved, violated, is_reverse, is_solved, terminated, invalid_action, is_key_moved):
-        reward = 0
-        if moved:
-            reward -= 0.05
-        if invalid_action:
-            reward -= 1.0
-        if self.last_action is not None and self.last_action[0] == block_id and self.last_action[1] == direction:
-            reward += 0.03
-        if violated:
-            reward -= 3.0
-        if is_reverse:
-            reward -= 3.0
-        if is_key_moved:
-            key = self.blocks[self.key_id]
-            reward += key["x"] * 0.5
-        if is_solved:
-            reward += 10.0
-        if not is_solved and terminated:
-            reward -= 5.0
-        return reward
-
-    # ----------------- is_solved -----------------
+    # ----------------- solved check -----------------
     def _is_solved(self):
-        key = self.blocks[self.key_id]
-        return key["x"] + key["w"] - 1 == (self.width - 1)
+        key_index = list(self.blocks.keys()).index(self.key_id)
+        return bool(is_solved_numba(self.all_x, self.all_w, key_index))
 
-    # ----------------- step -----------------
     # ----------------- step -----------------
     def step(self, action):
         if self.logging_enabled:
@@ -209,44 +240,60 @@ class PuzzleEnv(gym.Env):
         direction = action % 2
 
         real_block_id = self._index_to_block_id(chosen_index)
-        invalid_action = real_block_id is None
 
+        # ----- new numba reverse/invalid -----
+        if real_block_id is None:
+            current_idx = -1
+        else:
+            current_idx = list(self.blocks.keys()).index(real_block_id)
+
+        if self.last_action is None:
+            last_idx = -1
+            last_dir = -1
+        else:
+            last_idx = list(self.blocks.keys()).index(self.last_action[0])
+            last_dir = self.last_action[1]
+
+        invalid_int, reverse_int = check_action_flags_numba(
+            last_idx, last_dir, current_idx, direction
+        )
+
+        invalid_action = bool(invalid_int)
+        is_reverse = bool(reverse_int)
+
+        # ----- moving logic -----
         moved = False
         violated = False
-        is_reverse = False
-
         prev_key_x = self.prev_key_x
-
-        # для подсветки предыдущей позиции блока
         prev_block_pos = None
 
         if not invalid_action:
-            is_reverse = (
-                    self.last_action is not None and
-                    self.last_action[0] == real_block_id and
-                    self.last_action[1] != direction
-            )
             if self._can_move(real_block_id, direction):
-                # сохраняем старую позицию перед движением
-                prev_block_pos = dict(self.blocks[real_block_id])
+                if self.logging_enabled:
+                    prev_block_pos = dict(self.blocks[real_block_id])
                 self._move_block(real_block_id, direction)
                 moved = True
             else:
                 violated = True
 
-        is_key_moved = False
+        # ----- key movement -----
         key = self.blocks[self.key_id]
-        if key["x"] > prev_key_x:
-            is_key_moved = True
+        is_key_moved = key["x"] > prev_key_x
+        if is_key_moved:
             self.prev_key_x = key["x"]
 
+        # ----- solved check -----
         is_solved = self._is_solved()
         terminated = is_solved or self.step_num >= self.max_steps - 1
         truncated = False
 
-        reward = self._compute_reward(
-            real_block_id if real_block_id is not None else -1,
-            direction, moved, violated, is_reverse, is_solved, terminated, invalid_action, is_key_moved
+        # ----- Numba reward -----
+        reward = compute_reward_numba(
+            current_idx, direction,
+            moved, violated, is_reverse,
+            is_solved, terminated, invalid_action,
+            is_key_moved,
+            key["x"]
         )
 
         if self.logging_enabled:
@@ -259,5 +306,3 @@ class PuzzleEnv(gym.Env):
         obs = self._get_obs()
         info = {"is_success": is_solved}
         return obs, reward, terminated, truncated, info
-
-
