@@ -367,7 +367,7 @@ def run():
             "max_h": 6,
             "min_v": 5,
             "max_v": 6,
-            "min_blockers": 4,
+            "min_blockers": 3,
             "min_steps": 12,
             "count": count,
         },
@@ -378,7 +378,7 @@ def run():
             "min_v": 6,
             "max_v": 9,
             "min_blockers": 3,
-            "min_steps": 18,
+            "min_steps": 16,
             "count": count,
         },
     ]
