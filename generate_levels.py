@@ -2,6 +2,8 @@ import random, json, string
 from collections import deque, namedtuple
 import os
 
+from levels.arrows import LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW
+
 WIDTH = HEIGHT = 6
 KEY_ID = "0"
 KEY_Y = 2
@@ -42,28 +44,35 @@ def occupied_grid(blocks):
     return grid
 
 
-def neighbors_single_step(blocks):
+def neighbors_single_step_with_move(blocks):
+    """
+    Возвращает список (new_blocks, (block_id, dir_symbol))
+    """
     grid = occupied_grid(blocks)
     result = []
     for i, b in enumerate(blocks):
         if b.orient == "H":
+            # left
             if b.x - 1 >= 0 and grid[b.y][b.x - 1] is None:
                 new = list(blocks)
                 new[i] = Block(b.id, b.orient, b.length, b.x - 1, b.y)
-                result.append(new)
+                result.append((new, (b.id, LEFT_ARROW)))
+            # right
             if b.x + b.length < WIDTH and grid[b.y][b.x + b.length] is None:
                 new = list(blocks)
                 new[i] = Block(b.id, b.orient, b.length, b.x + 1, b.y)
-                result.append(new)
+                result.append((new, (b.id, RIGHT_ARROW)))
         else:
+            # up
             if b.y - 1 >= 0 and grid[b.y - 1][b.x] is None:
                 new = list(blocks)
                 new[i] = Block(b.id, b.orient, b.length, b.x, b.y - 1)
-                result.append(new)
+                result.append((new, (b.id, UP_ARROW)))
+            # down
             if b.y + b.length < HEIGHT and grid[b.y + b.length][b.x] is None:
                 new = list(blocks)
                 new[i] = Block(b.id, b.orient, b.length, b.x, b.y + 1)
-                result.append(new)
+                result.append((new, (b.id, DOWN_ARROW)))
     return result
 
 
@@ -157,96 +166,145 @@ def generate_random_blocks_safe(min_h, max_h, min_v, max_v, min_blockers):
     return blocks
 
 
-# ------------------------ BFS Проверка проходимости ------------------------
+# ------------------------ BFS решатель: возвращает путь (moves) ------------------------
 
 
-def is_solvable(blocks):
-    start = tuple(sorted((b.id, b.orient, b.length, b.x, b.y) for b in blocks))
-    visited = set()
-    queue = deque([blocks])
+def solve_with_moves(blocks):
+    """
+    BFS, возвращает список ходов (как list of (id, symbol)),
+    и также возвращает конечное количество шагов (len of moves).
+    Если нерешаем — возвращает (None, None)
+    """
+    start_state = tuple(sorted((b.id, b.orient, b.length, b.x, b.y) for b in blocks))
+    visited = set([start_state])
+    queue = deque([(blocks, [])])  # (blocks_list, moves_list)
+
     while queue:
-        cur = queue.popleft()
-        key = next(b for b in cur if b.id == KEY_ID)
+        cur_blocks, moves = queue.popleft()
+        # check goal
+        key = next(b for b in cur_blocks if b.id == KEY_ID)
         if key.x + KEY_LEN - 1 == WIDTH - 1 and key.y == KEY_Y:
-            return True
-        state = tuple(sorted((b.id, b.orient, b.length, b.x, b.y) for b in cur))
-        if state in visited:
+            return moves, len(moves)
+
+        for neigh_blocks, (bid, symbol) in neighbors_single_step_with_move(cur_blocks):
+            state = tuple(
+                sorted((b.id, b.orient, b.length, b.x, b.y) for b in neigh_blocks)
+            )
+            if state in visited:
+                continue
+            visited.add(state)
+            queue.append((neigh_blocks, moves + [(bid, symbol)]))
+
+    return None, None
+
+
+# ------------------------ Метаданные ------------------------
+
+
+def build_meta(blocks, moves):
+    # horizontal and vertical summary excluding key
+    horiz_sizes = {}
+    vert_sizes = {}
+    horiz_total = 0
+    vert_total = 0
+    for b in blocks:
+        if b.id == KEY_ID:
             continue
-        visited.add(state)
-        for neigh in neighbors_single_step(cur):
-            queue.append(neigh)
-    return False
+        if b.orient == "H":
+            horiz_total += 1
+            horiz_sizes[b.length] = horiz_sizes.get(b.length, 0) + 1
+        else:
+            vert_total += 1
+            vert_sizes[b.length] = vert_sizes.get(b.length, 0) + 1
+
+    # convert sizes keys to strings (like example)
+    horiz_sizes_str = {str(k): v for k, v in horiz_sizes.items()}
+    vert_sizes_str = {str(k): v for k, v in vert_sizes.items()}
+
+    # starting key_x (find key in initial blocks)
+    key = next(b for b in blocks if b.id == KEY_ID)
+    key_x = key.x
+
+    # moves to required format: list of single-key dicts
+    moves_list = [{str(bid): symbol} for (bid, symbol) in moves]
+
+    meta = {
+        "horizontal_blocks": {"total": horiz_total, "sizes": horiz_sizes_str},
+        "vertical_blocks": {"total": vert_total, "sizes": vert_sizes_str},
+        "key_x": key_x,
+        "moves": moves_list,
+    }
+    return meta
 
 
-# ------------------------ Подсчёт минимального количества шагов ------------------------
-
-
-def min_solution_steps(blocks):
-    visited = set()
-    queue = deque([(blocks, 0)])
-    while queue:
-        cur, steps = queue.popleft()
-        key = next(b for b in cur if b.id == KEY_ID)
-        if key.x + KEY_LEN - 1 == WIDTH - 1 and key.y == KEY_Y:
-            return steps
-        state = tuple(sorted((b.id, b.orient, b.length, b.x, b.y) for b in cur))
-        if state in visited:
-            continue
-        visited.add(state)
-        for neigh in neighbors_single_step(cur):
-            queue.append((neigh, steps + 1))
-    return None
-
-
-# ------------------------ Массовая генерация с автообновлением файла ------------------------
+# ------------------------ Массовая генерация — теперь с новым json-форматом ------------------------
 
 
 def generate_levels(settings, file_path):
-    result = {s["name"]: [] for s in settings}
-
-    # если файл существует, загружаем промежуточные уровни
+    # load existing (if any) to continue
+    levels_list = []
     if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            try:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
                 existing = json.load(f)
-                for k in existing:
-                    if k in result:
-                        result[k] = existing[k]
-            except:
-                pass
+                if (
+                    isinstance(existing, dict)
+                    and "levels" in existing
+                    and isinstance(existing["levels"], list)
+                ):
+                    levels_list = existing["levels"]
+        except Exception:
+            # ignore parse errors and start fresh
+            levels_list = []
 
+    # count how many already generated per category (not strictly needed, we just append)
+    # We'll still print per-category progress based on len of appended items for that run.
     for s in settings:
         name = s["name"]
-        print(f"Generating {s['count']} levels for '{name}'...")
-        generated = len(result[name])
+        target = s["count"]
+        print(f"Generating {target} levels for '{name}'...")
+        generated = 0
         attempts = 0
-        while generated < s["count"]:
+        while generated < target:
             attempts += 1
             blocks = generate_random_blocks_safe(
                 s["min_h"], s["max_h"], s["min_v"], s["max_v"], s.get("min_blockers", 0)
             )
-            if is_solvable(blocks):
-                min_steps_required = s.get("min_steps", 0)
-                steps = min_solution_steps(blocks)
-                if steps is not None and steps >= min_steps_required:
-                    level_str = grid_to_string(place_blocks(blocks))
-                    result[name].append(level_str)
-                    generated += 1
-                    # сохраняем JSON после каждой генерации
-                    with open(file_path, "w", encoding="utf-8") as f:
-                        json.dump(result, f, ensure_ascii=False, indent=2)
-                    print(
-                        f"  ✅ Level {generated} for '{name}' generated successfully (min steps: {steps})"
-                    )
+            # try solve and get moves
+            moves, steps = solve_with_moves(blocks)
+            if moves is None:
+                continue
+            # check min_steps if present
+            min_steps_required = s.get("min_steps", 0)
+            if steps is None or steps < min_steps_required:
+                continue
+
+            # build entry
+            level_data = grid_to_string(place_blocks(blocks))
+            meta = build_meta(blocks, moves)
+
+            entry = {"data": level_data, "meta": meta}
+            levels_list.append(entry)
+            generated += 1
+
+            # write to disk after each successful generation (update top-level structure)
+            out = {"levels": levels_list}
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(out, f, ensure_ascii=False, indent=2)
+
+            # log
+            print(
+                f"  ✅ Level {generated} for '{name}' generated successfully (min steps: {steps})"
+            )
         print(f"Finished '{name}' in {attempts} attempts.")
-    return result
+    return {"levels": levels_list}
 
 
 # ------------------------ Пример использования ------------------------
 
 if __name__ == "__main__":
-    file_path = "levels/generated_auto.json"
-    N = 1000  # количество уровней на категорию
+    file_path = "levels/generated_auto_with_meta.json"
+    N = 10  # количество уровней на категорию
     settings = [
         {
             "name": "elementary",

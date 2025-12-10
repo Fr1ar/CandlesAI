@@ -1,5 +1,7 @@
 import numpy as np
 
+from levels.arrows import LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW
+
 RESET = "\033[0m"
 FG_BLACK = "\033[30m"
 FG_WHITE = "\033[97m"
@@ -100,9 +102,9 @@ def action_to_text(action, env):
     type_str = "ключ" if block_id == env.key_id else "блок"
 
     if block["type"] == "H":
-        dir_str = "⬅" if direction == 0 else "⮕"
+        dir_str = LEFT_ARROW if direction == 0 else RIGHT_ARROW
     else:
-        dir_str = "⬆" if direction == 0 else "⬇"
+        dir_str = UP_ARROW if direction == 0 else DOWN_ARROW
 
     return f"Двигаем {type_str} '{char}' {dir_str} "
 
@@ -125,9 +127,9 @@ def log_action_mask(env, step, total_steps):
             action_index = block_idx * 2 + direction
             if mask[action_index]:
                 if block_type == "H":
-                    allowed_dirs.append("⬅" if direction == 0 else "⮕")
+                    allowed_dirs.append(LEFT_ARROW if direction == 0 else RIGHT_ARROW)
                 else:
-                    allowed_dirs.append("⬆" if direction == 0 else "⬇")
+                    allowed_dirs.append(UP_ARROW if direction == 0 else DOWN_ARROW)
 
         if allowed_dirs:
             block_name = env.block_texts.get(block_id, str(block_id))
