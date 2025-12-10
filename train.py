@@ -23,7 +23,7 @@ final_model = "puzzle_model"
 final_model_file = f"{final_model}.zip"
 final_model_path = f"output/{final_model_file}"
 checkpoint_pattern = f"output/{final_model}_*.zip"
-levels_path = "levels/dataset.json"
+levels_path = "levels/dataset2.json"
 
 
 # ----------------------------------------------
@@ -153,7 +153,7 @@ def run():
             ent_coef=0.12,
             n_epochs=10,
             device="auto",
-            verbose=0,  # (0 if n_envs == 1 else 1),
+            verbose=(0 if n_envs == 1 else 1),
         )
 
     # ----- Callback для периодического сохранения -----
