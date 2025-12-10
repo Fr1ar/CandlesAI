@@ -13,6 +13,7 @@ BLOCK_MAX = 4
 
 Block = namedtuple("Block", ["id", "orient", "length", "x", "y"])
 
+
 # ------------------------ Helpers ------------------------
 
 
@@ -188,12 +189,36 @@ def build_meta_compact(blocks, moves):
     horiz_sizes = [b.length for b in blocks if b.id != KEY_ID and b.orient == "H"]
     vert_sizes = [b.length for b in blocks if b.id != KEY_ID and b.orient == "V"]
     key = next(b for b in blocks if b.id == KEY_ID)
-    moves_list = [f"{bid}{symbol}" for (bid, symbol) in moves]
+    moves_str = " ".join(f"{bid}{symbol}" for (bid, symbol) in moves)
+
+    # Расчёт пустых клеток
+    grid = place_blocks(blocks)
+    empty_cells = sum(row.count("-") for row in grid)
+    max_empty_cells = WIDTH * HEIGHT
+
+    # Минимальное количество ходов
+    min_moves = len(moves)
+
+    max_possible_moves = 40
+
+    # Примерная формула для difficulty от 0 до 9
+    difficulty = int(
+        min(
+            9,
+            int(
+                min_moves / max_possible_moves * 5
+                + (max_empty_cells - empty_cells) / max_empty_cells * 4
+            ),
+        )
+    )
+
     return {
         "h_blocks": horiz_sizes,
         "v_blocks": vert_sizes,
         "key_x": key.x,
-        "moves": moves_list,
+        "min_moves": min_moves,
+        "moves": moves_str,
+        "difficulty": difficulty,
     }
 
 
@@ -209,7 +234,7 @@ def _dump_compact_arrays(obj, f, indent=2):
             for k, v in o.items():
                 items.append(
                     " " * (level * indent)
-                    + json.dumps(k)
+                    + json.dumps(k, ensure_ascii=False)
                     + ": "
                     + _serialize(v, level + 1)
                 )
@@ -283,13 +308,14 @@ def generate_levels(settings, file_path, use_standard_json=False):
             )
 
             print(
-                f"  ✅ Level {generated} for '{name}' generated successfully (min steps: {steps})"
+                f"  ✅ Level {generated} for '{name}' generated successfully (min steps: {steps}, difficulty: {meta['difficulty']})"
             )
         print(f"Finished '{name}' in {attempts} attempts.")
     return {"levels": levels_list}
 
 
 # ------------------------ Пример использования ------------------------
+
 
 def run():
     file_path = "levels/generated_auto_with_meta.json"
@@ -345,9 +371,18 @@ def run():
             "min_steps": 12,
             "count": count,
         },
+        {
+            "name": "mega_hard",
+            "min_h": 6,
+            "max_h": 9,
+            "min_v": 6,
+            "max_v": 9,
+            "min_blockers": 3,
+            "min_steps": 18,
+            "count": count,
+        },
     ]
 
-    # use_standard_json=False => компактный формат по умолчанию
     all_levels = generate_levels(settings, file_path, use_standard_json=False)
     print(f"✅ Finished. Saved to '{file_path}'")
 
