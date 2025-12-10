@@ -45,30 +45,23 @@ def occupied_grid(blocks):
 
 
 def neighbors_single_step_with_move(blocks):
-    """
-    Возвращает список (new_blocks, (block_id, dir_symbol))
-    """
     grid = occupied_grid(blocks)
     result = []
     for i, b in enumerate(blocks):
         if b.orient == "H":
-            # left
             if b.x - 1 >= 0 and grid[b.y][b.x - 1] is None:
                 new = list(blocks)
                 new[i] = Block(b.id, b.orient, b.length, b.x - 1, b.y)
                 result.append((new, (b.id, LEFT_ARROW)))
-            # right
             if b.x + b.length < WIDTH and grid[b.y][b.x + b.length] is None:
                 new = list(blocks)
                 new[i] = Block(b.id, b.orient, b.length, b.x + 1, b.y)
                 result.append((new, (b.id, RIGHT_ARROW)))
         else:
-            # up
             if b.y - 1 >= 0 and grid[b.y - 1][b.x] is None:
                 new = list(blocks)
                 new[i] = Block(b.id, b.orient, b.length, b.x, b.y - 1)
                 result.append((new, (b.id, UP_ARROW)))
-            # down
             if b.y + b.length < HEIGHT and grid[b.y + b.length][b.x] is None:
                 new = list(blocks)
                 new[i] = Block(b.id, b.orient, b.length, b.x, b.y + 1)
@@ -85,7 +78,6 @@ def generate_random_blocks_safe(min_h, max_h, min_v, max_v, min_blockers):
     blocks = []
     letter_i = 0
 
-    # ключ на старте
     key_x_pos = random.choice([0, 1])
     blocks.append(Block(KEY_ID, "H", KEY_LEN, key_x_pos, KEY_Y))
     used = {(key_x_pos + i, KEY_Y) for i in range(KEY_LEN)}
@@ -114,7 +106,6 @@ def generate_random_blocks_safe(min_h, max_h, min_v, max_v, min_blockers):
                     return Block(lid, "V", length, x, y)
         return None
 
-    # горизонтальные блоки
     n_h = random.randint(min_h, max_h)
     placed_h = 0
     while placed_h < n_h:
@@ -127,7 +118,6 @@ def generate_random_blocks_safe(min_h, max_h, min_v, max_v, min_blockers):
             if n_h < placed_h:
                 break
 
-    # вертикальные блоки
     n_v = random.randint(min_v, max_v)
     placed_v = 0
     while placed_v < n_v:
@@ -140,7 +130,6 @@ def generate_random_blocks_safe(min_h, max_h, min_v, max_v, min_blockers):
             if n_v < placed_v:
                 break
 
-    # блоки на линии ключа для гарантии min_blockers
     blockers_count = 0
     key_line_x_end = key_x_pos + KEY_LEN
     attempts_blockers = 0
@@ -166,22 +155,16 @@ def generate_random_blocks_safe(min_h, max_h, min_v, max_v, min_blockers):
     return blocks
 
 
-# ------------------------ BFS решатель: возвращает путь (moves) ------------------------
+# ------------------------ BFS решатель ------------------------
 
 
 def solve_with_moves(blocks):
-    """
-    BFS, возвращает список ходов (как list of (id, symbol)),
-    и также возвращает конечное количество шагов (len of moves).
-    Если нерешаем — возвращает (None, None)
-    """
     start_state = tuple(sorted((b.id, b.orient, b.length, b.x, b.y) for b in blocks))
     visited = set([start_state])
-    queue = deque([(blocks, [])])  # (blocks_list, moves_list)
+    queue = deque([(blocks, [])])
 
     while queue:
         cur_blocks, moves = queue.popleft()
-        # check goal
         key = next(b for b in cur_blocks if b.id == KEY_ID)
         if key.x + KEY_LEN - 1 == WIDTH - 1 and key.y == KEY_Y:
             return moves, len(moves)
@@ -198,50 +181,61 @@ def solve_with_moves(blocks):
     return None, None
 
 
-# ------------------------ Метаданные ------------------------
+# ------------------------ Метаданные (компактный вариант) ------------------------
 
 
-def build_meta(blocks, moves):
-    # horizontal and vertical summary excluding key
-    horiz_sizes = {}
-    vert_sizes = {}
-    horiz_total = 0
-    vert_total = 0
-    for b in blocks:
-        if b.id == KEY_ID:
-            continue
-        if b.orient == "H":
-            horiz_total += 1
-            horiz_sizes[b.length] = horiz_sizes.get(b.length, 0) + 1
-        else:
-            vert_total += 1
-            vert_sizes[b.length] = vert_sizes.get(b.length, 0) + 1
-
-    # convert sizes keys to strings (like example)
-    horiz_sizes_str = {str(k): v for k, v in horiz_sizes.items()}
-    vert_sizes_str = {str(k): v for k, v in vert_sizes.items()}
-
-    # starting key_x (find key in initial blocks)
+def build_meta_compact(blocks, moves):
+    horiz_sizes = [b.length for b in blocks if b.id != KEY_ID and b.orient == "H"]
+    vert_sizes = [b.length for b in blocks if b.id != KEY_ID and b.orient == "V"]
     key = next(b for b in blocks if b.id == KEY_ID)
-    key_x = key.x
-
-    # moves to required format: list of single-key dicts
-    moves_list = [{str(bid): symbol} for (bid, symbol) in moves]
-
-    meta = {
-        "horizontal_blocks": {"total": horiz_total, "sizes": horiz_sizes_str},
-        "vertical_blocks": {"total": vert_total, "sizes": vert_sizes_str},
-        "key_x": key_x,
+    moves_list = [f"{bid}{symbol}" for (bid, symbol) in moves]
+    return {
+        "h_blocks": horiz_sizes,
+        "v_blocks": vert_sizes,
+        "key_x": key.x,
         "moves": moves_list,
     }
-    return meta
 
 
-# ------------------------ Массовая генерация — теперь с новым json-форматом ------------------------
+# ------------------------ JSON с объектами с отступом и массивами в одну строку ------------------------
 
 
-def generate_levels(settings, file_path):
-    # load existing (if any) to continue
+def _dump_compact_arrays(obj, f, indent=2):
+    """Сериализация: dict с отступами, list в одну строку"""
+
+    def _serialize(o, level=0):
+        if isinstance(o, dict):
+            items = []
+            for k, v in o.items():
+                items.append(
+                    " " * (level * indent)
+                    + json.dumps(k)
+                    + ": "
+                    + _serialize(v, level + 1)
+                )
+            pad = " " * ((level - 1) * indent) if level > 0 else ""
+            return "{\n" + ",\n".join(items) + "\n" + pad + "}"
+        elif isinstance(o, list):
+            return "[" + ",".join(_serialize(x, level + 1) for x in o) + "]"
+        else:
+            return json.dumps(o, ensure_ascii=False)
+
+    f.write(_serialize(obj))
+
+
+def save_json(obj, file_path, indent=2, use_standard_json=False):
+    if use_standard_json:
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(obj, f, ensure_ascii=False, indent=indent)
+    else:
+        with open(file_path, "w", encoding="utf-8") as f:
+            _dump_compact_arrays(obj, f, indent=indent)
+
+
+# ------------------------ Массовая генерация ------------------------
+
+
+def generate_levels(settings, file_path, use_standard_json=False):
     levels_list = []
     if os.path.exists(file_path):
         try:
@@ -254,11 +248,8 @@ def generate_levels(settings, file_path):
                 ):
                     levels_list = existing["levels"]
         except Exception:
-            # ignore parse errors and start fresh
             levels_list = []
 
-    # count how many already generated per category (not strictly needed, we just append)
-    # We'll still print per-category progress based on len of appended items for that run.
     for s in settings:
         name = s["name"]
         target = s["count"]
@@ -270,29 +261,27 @@ def generate_levels(settings, file_path):
             blocks = generate_random_blocks_safe(
                 s["min_h"], s["max_h"], s["min_v"], s["max_v"], s.get("min_blockers", 0)
             )
-            # try solve and get moves
             moves, steps = solve_with_moves(blocks)
             if moves is None:
                 continue
-            # check min_steps if present
-            min_steps_required = s.get("min_steps", 0)
-            if steps is None or steps < min_steps_required:
+            if steps is None or steps < s.get("min_steps", 0):
                 continue
 
-            # build entry
             level_data = grid_to_string(place_blocks(blocks))
-            meta = build_meta(blocks, moves)
+            meta = build_meta_compact(blocks, moves)
 
             entry = {"data": level_data, "meta": meta}
             levels_list.append(entry)
             generated += 1
 
-            # write to disk after each successful generation (update top-level structure)
-            out = {"levels": levels_list}
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(out, f, ensure_ascii=False, indent=2)
+            # запись JSON с возможностью выбора стандартного формата
+            save_json(
+                {"levels": levels_list},
+                file_path,
+                indent=2,
+                use_standard_json=use_standard_json,
+            )
 
-            # log
             print(
                 f"  ✅ Level {generated} for '{name}' generated successfully (min steps: {steps})"
             )
@@ -302,9 +291,9 @@ def generate_levels(settings, file_path):
 
 # ------------------------ Пример использования ------------------------
 
-if __name__ == "__main__":
+def run():
     file_path = "levels/generated_auto_with_meta.json"
-    N = 10  # количество уровней на категорию
+    count = 10
     settings = [
         {
             "name": "elementary",
@@ -314,7 +303,7 @@ if __name__ == "__main__":
             "max_v": 2,
             "min_blockers": 1,
             "min_steps": 3,
-            "count": N,
+            "count": count,
         },
         {
             "name": "easy",
@@ -324,7 +313,7 @@ if __name__ == "__main__":
             "max_v": 3,
             "min_blockers": 1,
             "min_steps": 5,
-            "count": N,
+            "count": count,
         },
         {
             "name": "medium",
@@ -334,7 +323,7 @@ if __name__ == "__main__":
             "max_v": 4,
             "min_blockers": 2,
             "min_steps": 7,
-            "count": N,
+            "count": count,
         },
         {
             "name": "hard",
@@ -344,7 +333,7 @@ if __name__ == "__main__":
             "max_v": 5,
             "min_blockers": 3,
             "min_steps": 10,
-            "count": N,
+            "count": count,
         },
         {
             "name": "very_hard",
@@ -354,10 +343,14 @@ if __name__ == "__main__":
             "max_v": 6,
             "min_blockers": 4,
             "min_steps": 12,
-            "count": N,
+            "count": count,
         },
     ]
 
-    all_levels = generate_levels(settings, file_path)
-
+    # use_standard_json=False => компактный формат по умолчанию
+    all_levels = generate_levels(settings, file_path, use_standard_json=False)
     print(f"✅ Finished. Saved to '{file_path}'")
+
+
+if __name__ == "__main__":
+    run()
