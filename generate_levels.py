@@ -70,93 +70,7 @@ def neighbors_single_step_with_move(blocks):
     return result
 
 
-# ------------------------ Безопасная генерация блоков ------------------------
-
-
-def generate_random_blocks_safe(min_h, max_h, min_v, max_v, min_blockers):
-    letters = list(string.ascii_lowercase)
-    random.shuffle(letters)
-    blocks = []
-    letter_i = 0
-
-    key_x_pos = random.choice([0, 1])
-    blocks.append(Block(KEY_ID, "H", KEY_LEN, key_x_pos, KEY_Y))
-    used = {(key_x_pos + i, KEY_Y) for i in range(KEY_LEN)}
-
-    def place_block(orient):
-        nonlocal letter_i
-        if letter_i >= len(letters):
-            return None
-        lid = letters[letter_i]
-        letter_i += 1
-        length = random.randint(BLOCK_MIN, BLOCK_MAX)
-        for attempt in range(50):
-            if orient == "H":
-                y = random.randint(0, HEIGHT - 1)
-                x = random.randint(0, WIDTH - length)
-                if all((x + dx, y) not in used for dx in range(length)):
-                    for dx in range(length):
-                        used.add((x + dx, y))
-                    return Block(lid, "H", length, x, y)
-            else:
-                x = random.randint(0, WIDTH - 1)
-                y = random.randint(0, HEIGHT - length)
-                if all((x, y + dy) not in used for dy in range(length)):
-                    for dy in range(length):
-                        used.add((x, y + dy))
-                    return Block(lid, "V", length, x, y)
-        return None
-
-    n_h = random.randint(min_h, max_h)
-    placed_h = 0
-    while placed_h < n_h:
-        b = place_block("H")
-        if b:
-            blocks.append(b)
-            placed_h += 1
-        else:
-            n_h -= 1
-            if n_h < placed_h:
-                break
-
-    n_v = random.randint(min_v, max_v)
-    placed_v = 0
-    while placed_v < n_v:
-        b = place_block("V")
-        if b:
-            blocks.append(b)
-            placed_v += 1
-        else:
-            n_v -= 1
-            if n_v < placed_v:
-                break
-
-    blockers_count = 0
-    key_line_x_end = key_x_pos + KEY_LEN
-    attempts_blockers = 0
-    max_attempts_blockers = 100
-    while blockers_count < min_blockers and attempts_blockers < max_attempts_blockers:
-        attempts_blockers += 1
-        if letter_i >= len(letters):
-            break
-        lid = letters[letter_i]
-        letter_i += 1
-        length = random.randint(BLOCK_MIN, BLOCK_MAX)
-        y = KEY_Y
-        max_x = WIDTH - length
-        if max_x < key_line_x_end:
-            continue
-        x = random.randint(key_line_x_end, max_x)
-        if all((x + dx, y) not in used for dx in range(length)):
-            for dx in range(length):
-                used.add((x + dx, y))
-            blocks.append(Block(lid, "H", length, x, y))
-            blockers_count += 1
-
-    return blocks
-
-
-# ------------------------ BFS решатель ------------------------
+# ------------------------ BFS Solver ------------------------
 
 
 def solve_with_moves(blocks):
@@ -166,6 +80,7 @@ def solve_with_moves(blocks):
 
     while queue:
         cur_blocks, moves = queue.popleft()
+
         key = next(b for b in cur_blocks if b.id == KEY_ID)
         if key.x + KEY_LEN - 1 == WIDTH - 1 and key.y == KEY_Y:
             return moves, len(moves)
@@ -182,7 +97,121 @@ def solve_with_moves(blocks):
     return None, None
 
 
-# ------------------------ Метаданные (компактный вариант) ------------------------
+# ------------------------ New generation logic ------------------------
+
+
+def generate_level_stepwise(settings):
+    min_h, max_h = settings["min_h"], settings["max_h"]
+    min_v, max_v = settings["min_v"], settings["max_v"]
+    min_blockers = settings.get("min_blockers", 0)
+
+    target_h = random.randint(min_h, max_h)
+    target_v = random.randint(min_v, max_v)
+
+    letters = list(string.ascii_lowercase)
+    random.shuffle(letters)
+    letter_i = 0
+
+    key_x = random.choice([0, 1])
+    blocks = [Block(KEY_ID, "H", KEY_LEN, key_x, KEY_Y)]
+
+    def try_place_block(block_list, orient):
+        nonlocal letter_i
+        if letter_i >= len(letters):
+            return None
+
+        lid = letters[letter_i]
+
+        # --- Шанс короткого блока ---
+        chance_map = {1: 0.1, 2: 0.3, 3: 0.5, 4: 0.7, 5: 0.9}
+        chance_short = chance_map.get(min_h if orient == "H" else min_v, 0.1)
+        if random.random() < chance_short:
+            length = 2
+        else:
+            length = random.randint(3, BLOCK_MAX)
+
+        occupied = occupied_grid(block_list)
+        possible_positions = []
+
+        if orient == "H":
+            for y in range(HEIGHT):
+                for x in range(WIDTH - length + 1):
+                    if all(occupied[y][x + dx] is None for dx in range(length)):
+                        possible_positions.append((x, y))
+        else:
+            for y in range(HEIGHT - length + 1):
+                for x in range(WIDTH):
+                    if all(occupied[y + dy][x] is None for dy in range(length)):
+                        possible_positions.append((x, y))
+
+        random.shuffle(possible_positions)
+        if not possible_positions:
+            return None
+
+        for x, y in possible_positions:
+            new_block = Block(lid, orient, length, x, y)
+            test_blocks = block_list + [new_block]
+            moves, steps = solve_with_moves(test_blocks)
+            if moves is not None:
+                letter_i += 1
+                return new_block
+
+        return None
+
+    placed_h = 0
+    while placed_h < target_h:
+        b = try_place_block(blocks, "H")
+        if b is None:
+            return None
+        blocks.append(b)
+        placed_h += 1
+
+    placed_v = 0
+    while placed_v < target_v:
+        b = try_place_block(blocks, "V")
+        if b is None:
+            return None
+        blocks.append(b)
+        placed_v += 1
+
+    blockers_count = 0
+    key_line_x_end = key_x + KEY_LEN
+
+    occupied = occupied_grid(blocks)
+    while blockers_count < min_blockers and letter_i < len(letters):
+        lid = letters[letter_i]
+        length = random.randint(BLOCK_MIN, BLOCK_MAX)
+        y = KEY_Y
+
+        max_x = WIDTH - length
+        if max_x < key_line_x_end:
+            break
+
+        x_positions = [x for x in range(key_line_x_end, max_x + 1)]
+        random.shuffle(x_positions)
+
+        placed = False
+        for x in x_positions:
+            if all(occupied[y][x + dx] is None for dx in range(length)):
+                new_block = Block(lid, "H", length, x, y)
+                test_blocks = blocks + [new_block]
+                moves, steps = solve_with_moves(test_blocks)
+                if moves is not None:
+                    blocks.append(new_block)
+                    for dx in range(length):
+                        occupied[y][x + dx] = lid
+                    blockers_count += 1
+                    letter_i += 1
+                    placed = True
+                    break
+
+        if not placed:
+            break
+
+    return blocks
+
+
+# ------------------------ Meta ------------------------
 
 
 def build_meta_compact(blocks, moves):
@@ -191,17 +220,13 @@ def build_meta_compact(blocks, moves):
     key = next(b for b in blocks if b.id == KEY_ID)
     moves_str = " ".join(f"{bid}{symbol}" for (bid, symbol) in moves)
 
-    # Расчёт пустых клеток
     grid = place_blocks(blocks)
     empty_cells = sum(row.count("-") for row in grid)
     max_empty_cells = WIDTH * HEIGHT
 
-    # Минимальное количество ходов
     min_moves = len(moves)
-
     max_possible_moves = 40
 
-    # Примерная формула для difficulty от 0 до 9
     difficulty = int(
         min(
             9,
@@ -222,12 +247,10 @@ def build_meta_compact(blocks, moves):
     }
 
 
-# ------------------------ JSON с объектами с отступом и массивами в одну строку ------------------------
+# ------------------------ JSON writer ------------------------
 
 
 def _dump_compact_arrays(obj, f, indent=2):
-    """Сериализация: dict с отступами, list в одну строку"""
-
     def _serialize(o, level=0):
         if isinstance(o, dict):
             items = []
@@ -257,20 +280,17 @@ def save_json(obj, file_path, indent=2, use_standard_json=False):
             _dump_compact_arrays(obj, f, indent=indent)
 
 
-# ------------------------ Массовая генерация ------------------------
+# ------------------------ Master generation ------------------------
 
 
 def generate_levels(settings, file_path, use_standard_json=False):
     levels_list = []
+
     if os.path.exists(file_path):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 existing = json.load(f)
-                if (
-                    isinstance(existing, dict)
-                    and "levels" in existing
-                    and isinstance(existing["levels"], list)
-                ):
+                if isinstance(existing, dict) and "levels" in existing:
                     levels_list = existing["levels"]
         except Exception:
             levels_list = []
@@ -278,18 +298,22 @@ def generate_levels(settings, file_path, use_standard_json=False):
     for s in settings:
         name = s["name"]
         target = s["count"]
+        min_steps_required = s.get("min_steps", 0)
+
         print(f"Generating {target} levels for '{name}'...")
+
         generated = 0
         attempts = 0
+
         while generated < target:
             attempts += 1
-            blocks = generate_random_blocks_safe(
-                s["min_h"], s["max_h"], s["min_v"], s["max_v"], s.get("min_blockers", 0)
-            )
-            moves, steps = solve_with_moves(blocks)
-            if moves is None:
+
+            blocks = generate_level_stepwise(s)
+            if blocks is None:
                 continue
-            if steps is None or steps < s.get("min_steps", 0):
+
+            moves, steps = solve_with_moves(blocks)
+            if moves is None or steps < min_steps_required:
                 continue
 
             level_data = grid_to_string(place_blocks(blocks))
@@ -297,9 +321,7 @@ def generate_levels(settings, file_path, use_standard_json=False):
 
             entry = {"data": level_data, "meta": meta}
             levels_list.append(entry)
-            generated += 1
 
-            # запись JSON с возможностью выбора стандартного формата
             save_json(
                 {"levels": levels_list},
                 file_path,
@@ -308,82 +330,79 @@ def generate_levels(settings, file_path, use_standard_json=False):
             )
 
             print(
-                f"  ✅ Level {generated} for '{name}' generated successfully (min steps: {steps}, difficulty: {meta['difficulty']})"
+                f"  ✅ Level {generated + 1} for '{name}' generated successfully "
+                f"(min steps: {steps}, difficulty: {meta['difficulty']})"
             )
+
+            generated += 1
+
         print(f"Finished '{name}' in {attempts} attempts.")
+
     return {"levels": levels_list}
 
 
-# ------------------------ Пример использования ------------------------
+# ------------------------ Usage ------------------------
 
 
 def run():
     file_path = "levels/generated_auto_with_meta.json"
     count = 10
     settings = [
-        {
-            "name": "elementary",
-            "min_h": 1,
-            "max_h": 2,
-            "min_v": 1,
-            "max_v": 2,
-            "min_blockers": 1,
-            "min_steps": 3,
-            "count": count,
-        },
-        {
-            "name": "easy",
-            "min_h": 2,
-            "max_h": 3,
-            "min_v": 2,
-            "max_v": 3,
-            "min_blockers": 1,
-            "min_steps": 5,
-            "count": count,
-        },
-        {
-            "name": "medium",
-            "min_h": 3,
-            "max_h": 4,
-            "min_v": 3,
-            "max_v": 4,
-            "min_blockers": 2,
-            "min_steps": 7,
-            "count": count,
-        },
-        {
-            "name": "hard",
-            "min_h": 4,
-            "max_h": 5,
-            "min_v": 4,
-            "max_v": 5,
-            "min_blockers": 3,
-            "min_steps": 10,
-            "count": count,
-        },
+        # {
+        #     "name": "elementary",
+        #     "min_h": 1, "max_h": 2,
+        #     "min_v": 1, "max_v": 2,
+        #     "min_blockers": 1,
+        #     "min_steps": 3,
+        #     "count": count,
+        # },
+        # {
+        #     "name": "easy",
+        #     "min_h": 2, "max_h": 3,
+        #     "min_v": 2, "max_v": 3,
+        #     "min_blockers": 1,
+        #     "min_steps": 5,
+        #     "count": count,
+        # },
+        # {
+        #     "name": "medium",
+        #     "min_h": 3, "max_h": 4,
+        #     "min_v": 3, "max_v": 4,
+        #     "min_blockers": 2,
+        #     "min_steps": 7,
+        #     "count": count,
+        # },
+        # {
+        #     "name": "hard",
+        #     "min_h": 4, "max_h": 5,
+        #     "min_v": 4, "max_v": 5,
+        #     "min_blockers": 3,
+        #     "min_steps": 10,
+        #     "count": count,
+        # },
         {
             "name": "very_hard",
-            "min_h": 5,
+            "min_h": 4,
             "max_h": 6,
-            "min_v": 5,
+            "min_v": 4,
             "max_v": 6,
-            "min_blockers": 3,
-            "min_steps": 12,
+            "min_blockers": 2,
+            "min_steps": 18,
             "count": count,
         },
         {
             "name": "mega_hard",
-            "min_h": 6,
-            "max_h": 9,
-            "min_v": 6,
-            "max_v": 9,
-            "min_blockers": 3,
-            "min_steps": 16,
+            "min_h": 5,
+            "max_h": 7,
+            "min_v": 5,
+            "max_v": 7,
+            "min_blockers": 2,
+            "min_steps": 24,
             "count": count,
         },
     ]
 
-    all_levels = generate_levels(settings, file_path, use_standard_json=False)
+    generate_levels(settings, file_path, use_standard_json=False)
     print(f"✅ Finished. Saved to '{file_path}'")
 
 
