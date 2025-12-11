@@ -5,6 +5,8 @@ from stable_baselines3.common.callbacks import BaseCallback
 from datetime import datetime
 import os
 import glob
+import random
+import numpy as np
 
 from env import PuzzleEnv
 from parser import load_levels
@@ -24,6 +26,7 @@ final_model_file = f"{final_model}.zip"
 final_model_path = f"output/{final_model_file}"
 checkpoint_pattern = f"output/{final_model}_*.zip"
 levels_path = "levels/dataset.json"
+STEP_INCREMENT = 10_000  # шаги для увеличения сложности
 
 
 # ----------------------------------------------
@@ -60,20 +63,51 @@ class SaveEveryNStepsCallback(BaseCallback):
 
 # ----------------- MULTI-LEVEL ENV -----------------
 class SequentialMultiLevelEnv(PuzzleEnv):
-    def __init__(self, levels):
-        self.levels = levels
-        self.level_index = 0
+    def __init__(self, levels, step_increment=STEP_INCREMENT):
         super().__init__(text_level=None)
+        self.levels = levels
+        self.step_increment = step_increment
+        self.current_min_moves = 0
+        self.total_steps_done = 0
+        self.logging_enabled = True
+
+        # --- numpy массив для min_moves всех уровней ---
+        self.min_moves_array = np.array(
+            [lvl.get("meta", {}).get("min_moves", 0) for lvl in levels]
+        )
+        self.max_min_moves = self.min_moves_array.max()
+        self.num_levels = len(levels)
 
     def reset(self, seed=None, options=None):
-        current_level = self.levels[self.level_index]
+        # --- eligible levels ---
+        eligible_mask = self.min_moves_array <= self.current_min_moves
+        eligible_indices = np.flatnonzero(eligible_mask)
+
+        if eligible_indices.size == 0:
+            eligible_indices = np.arange(self.num_levels)
+
+        chosen_idx = random.choice(eligible_indices)
+        current_level = self.levels[chosen_idx]
+
         self.text_level = current_level["data"]
         meta = current_level.get("meta", {})
         difficulty = meta.get("difficulty")
-        # print(f"[LOG] Сложность текущего уровня: {difficulty}")
+        min_moves = meta.get("min_moves", 0)
 
-        # Переключаем индекс уровня на следующий
-        self.level_index = (self.level_index + 1) % len(self.levels)
+        if self.logging_enabled:
+            log(f"[LEVEL] min_moves={min_moves}, difficulty={difficulty}")
+
+        # --- Постепенное увеличение сложности ---
+        self.total_steps_done += self.step_num
+        if (
+            self.total_steps_done >= self.step_increment
+            and self.current_min_moves < self.max_min_moves
+        ):
+            self.current_min_moves += 1
+            self.total_steps_done = 0
+            if self.logging_enabled:
+                log(f"[LEVEL] Увеличиваем current_min_moves: {self.current_min_moves}")
+
         return super().reset(seed=seed, options=options)
 
 
