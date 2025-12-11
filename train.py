@@ -20,13 +20,15 @@ total_timesteps = 10_000_000_000
 checkpoint_freq = 100_000_000
 # Как часто выводить в лог количество шагов
 log_every_n_timesteps = 100_000
+# Через сколько шагов увеличивать сложность
+min_step_increment = 10_000_000
+
 
 final_model = "puzzle_model"
 final_model_file = f"{final_model}.zip"
 final_model_path = f"output/{final_model_file}"
 checkpoint_pattern = f"output/{final_model}_*.zip"
 levels_path = "levels/dataset.json"
-STEP_INCREMENT = 10_000  # шаги для увеличения сложности
 
 
 # ----------------------------------------------
@@ -63,7 +65,7 @@ class SaveEveryNStepsCallback(BaseCallback):
 
 # ----------------- MULTI-LEVEL ENV -----------------
 class SequentialMultiLevelEnv(PuzzleEnv):
-    def __init__(self, levels, step_increment=STEP_INCREMENT):
+    def __init__(self, levels, step_increment=min_step_increment):
         super().__init__(text_level=None)
         self.levels = levels
         self.step_increment = step_increment
