@@ -95,7 +95,7 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         min_moves = meta.get("min_moves", 0)
 
         if self.logging_enabled:
-            log(f"[LEVEL] min_moves={min_moves}, difficulty={difficulty}")
+            log(f"min_moves={min_moves}, difficulty={difficulty}")
 
         # --- Постепенное увеличение сложности ---
         self.total_steps_done += self.step_num
@@ -106,7 +106,7 @@ class SequentialMultiLevelEnv(PuzzleEnv):
             self.current_min_moves += 1
             self.total_steps_done = 0
             if self.logging_enabled:
-                log(f"[LEVEL] Увеличиваем current_min_moves: {self.current_min_moves}")
+                log(f"Увеличиваем current_min_moves: {self.current_min_moves}")
 
         return super().reset(seed=seed, options=options)
 
