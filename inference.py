@@ -1,8 +1,6 @@
 from sb3_contrib import MaskablePPO
 from env import PuzzleEnv
 from parser import load_levels
-from sb3_contrib.common.wrappers import ActionMasker
-import numpy as np
 
 
 def is_solvable_single(text_level, model_path, max_steps=200):

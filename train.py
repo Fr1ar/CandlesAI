@@ -23,7 +23,7 @@ final_model = "puzzle_model"
 final_model_file = f"{final_model}.zip"
 final_model_path = f"output/{final_model_file}"
 checkpoint_pattern = f"output/{final_model}_*.zip"
-levels_path = "levels/dataset2.json"
+levels_path = "levels/dataset.json"
 
 
 # ----------------------------------------------
@@ -66,7 +66,13 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         super().__init__(text_level=None)
 
     def reset(self, seed=None, options=None):
-        self.text_level = self.levels[self.level_index]
+        current_level = self.levels[self.level_index]
+        self.text_level = current_level["data"]
+        meta = current_level.get("meta", {})
+        difficulty = meta.get("difficulty")
+        # print(f"[LOG] Сложность текущего уровня: {difficulty}")
+
+        # Переключаем индекс уровня на следующий
         self.level_index = (self.level_index + 1) % len(self.levels)
         return super().reset(seed=seed, options=options)
 

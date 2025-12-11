@@ -1,6 +1,6 @@
 import numpy as np
 
-from levels.arrows import LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW
+from arrows import LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW
 
 RESET = "\033[0m"
 FG_BLACK = "\033[30m"

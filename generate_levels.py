@@ -2,7 +2,7 @@ import random, json, string
 from collections import deque, namedtuple
 import os
 
-from levels.arrows import LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW
+from arrows import LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW
 
 WIDTH = HEIGHT = 6
 KEY_ID = "0"
@@ -345,7 +345,7 @@ def generate_levels(settings, file_path, use_standard_json=False):
 
 
 def run():
-    file_path = "levels/generated_auto_with_meta.json"
+    file_path = "levels/dataset2.json"
     count = 10
     settings = [
         # {

@@ -1,7 +1,7 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from parser import parse_level, generate_default_level
+from parser import parse_level
 from utils import log_action, log_level, log_action_mask
 from numba import njit
 
@@ -208,13 +208,9 @@ class PuzzleEnv(gym.Env):
         self.last_action = None
         self.prev_key_x = 0
         self.step_num = 0
-
-        if self.text_level is None:
-            self.blocks, self.block_texts, self.key_id = generate_default_level()
-        else:
-            self.blocks, self.block_texts, self.key_id = parse_level(
-                text_level=self.text_level
-            )
+        self.blocks, self.block_texts, self.key_id = parse_level(
+            text_level=self.text_level
+        )
 
         # update vector arrays
         self.num_blocks = len(self.blocks)

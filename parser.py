@@ -1,17 +1,25 @@
 import json
 
 
-# Загрузка уровней из файла
+# ----------------- Загрузка уровней из файла -----------------
 def load_levels(levels_file):
     with open(levels_file, "r", encoding="utf-8") as f:
         data = json.load(f)
-    levels = data.get("levels", [])
-    if not levels:
+    levels_raw = data.get("levels", [])
+    if not levels_raw:
         raise ValueError("Файл пуст")
+
+    levels = []
+    for i, lvl in enumerate(levels_raw):
+        text = lvl.get("data", "")
+        if not text:
+            raise ValueError(f"Уровень {i} не содержит поле 'data'")
+        meta = lvl.get("meta", None)
+        levels.append({"data": text, "meta": meta})
     return levels
 
 
-# Парсер уровня
+# ----------------- Парсер уровня -----------------
 def parse_level(text_level):
     next_id = 0
     blocks = {}
@@ -31,7 +39,7 @@ def parse_level(text_level):
 
             ch = grid[y][x]
 
-            # horizontal?
+            # горизонтальный блок
             w = 1
             while x + w < W and grid[y][x + w] == ch:
                 w += 1
@@ -41,14 +49,12 @@ def parse_level(text_level):
                 block_texts[next_id] = ch
                 if ch == "0":
                     key_id = next_id
-
                 for dx in range(w):
                     used[y][x + dx] = True
-
                 next_id += 1
                 continue
 
-            # vertical?
+            # вертикальный блок
             h = 1
             while y + h < H and grid[y + h][x] == ch:
                 h += 1
@@ -58,14 +64,12 @@ def parse_level(text_level):
                 block_texts[next_id] = ch
                 if ch == "0":
                     key_id = next_id
-
                 for dy in range(h):
                     used[y + dy][x] = True
-
                 next_id += 1
                 continue
 
-            # single block
+            # одиночный блок
             blocks[next_id] = {
                 "x": x,
                 "y": y,
@@ -82,27 +86,5 @@ def parse_level(text_level):
 
     if key_id is None:
         raise ValueError("No key '0' found")
-
-    return blocks, block_texts, key_id
-
-
-# Генерация уровня по умолчанию
-def generate_default_level():
-    next_id = 0
-    blocks = {}
-    block_texts = {}
-
-    blocks[next_id] = {"x": 0, "y": 2, "w": 2, "h": 1, "type": "H"}
-    block_texts[next_id] = "0"
-    key_id = next_id
-    next_id += 1
-
-    blocks[next_id] = {"x": 2, "y": 0, "w": 3, "h": 1, "type": "H"}
-    block_texts[next_id] = "a"
-    next_id += 1
-
-    blocks[next_id] = {"x": 3, "y": 1, "w": 1, "h": 3, "type": "V"}
-    block_texts[next_id] = "b"
-    next_id += 1
 
     return blocks, block_texts, key_id
