@@ -10,6 +10,7 @@ KEY_Y = 2
 KEY_LEN = 2
 BLOCK_MIN = 2
 BLOCK_MAX = 4
+MAX_BFS_STEPS = 100
 
 Block = namedtuple("Block", ["id", "orient", "length", "x", "y"])
 
@@ -73,13 +74,23 @@ def neighbors_single_step_with_move(blocks):
 # ------------------------ BFS Solver ------------------------
 
 
-def solve_with_moves(blocks):
+# ------------------------ BFS Solver ------------------------
+
+def solve_with_moves(blocks, max_steps=MAX_BFS_STEPS):
+    """
+    BFS с ограничением на максимальное количество ходов.
+    Если количество ходов превысит max_steps, возвращает (None, None)
+    """
     start_state = tuple(sorted((b.id, b.orient, b.length, b.x, b.y) for b in blocks))
     visited = set([start_state])
     queue = deque([(blocks, [])])
 
     while queue:
         cur_blocks, moves = queue.popleft()
+
+        # Ограничение по количеству ходов
+        if len(moves) > max_steps:
+            return None, None
 
         key = next(b for b in cur_blocks if b.id == KEY_ID)
         if key.x + KEY_LEN - 1 == WIDTH - 1 and key.y == KEY_Y:
@@ -95,6 +106,7 @@ def solve_with_moves(blocks):
             queue.append((neigh_blocks, moves + [(bid, symbol)]))
 
     return None, None
+
 
 
 # ------------------------ New generation logic ------------------------
@@ -208,6 +220,11 @@ def generate_level_stepwise(settings):
         if not placed:
             break
 
+    # ------------------------ Лог уровня ------------------------
+    # grid = place_blocks(blocks)
+    # level_str = grid_to_string(grid)
+    # print(f"Level candidate: {level_str}")
+
     return blocks
 
 
@@ -296,11 +313,10 @@ def generate_levels(settings, file_path, use_standard_json=False):
             levels_list = []
 
     for s in settings:
-        name = s["name"]
         target = s["count"]
         min_steps_required = s.get("min_steps", 0)
 
-        print(f"Generating {target} levels for '{name}'...")
+        print(f"Generating {target} levels (min_steps = {min_steps_required})")
 
         generated = 0
         attempts = 0
@@ -330,13 +346,13 @@ def generate_levels(settings, file_path, use_standard_json=False):
             )
 
             print(
-                f"  ✅ Level {generated + 1} for '{name}' generated successfully "
+                f"  ✅ Level {generated + 1} generated successfully "
                 f"(min steps: {steps}, difficulty: {meta['difficulty']})"
             )
 
             generated += 1
 
-        print(f"Finished '{name}' in {attempts} attempts.")
+        print(f"Finished in {attempts} attempts.")
 
     return {"levels": levels_list}
 
@@ -346,58 +362,41 @@ def generate_levels(settings, file_path, use_standard_json=False):
 
 def run():
     file_path = "levels/dataset2.json"
-    count = 10
+    count = 1000
     settings = [
-        # {
-        #     "name": "elementary",
-        #     "min_h": 1, "max_h": 2,
-        #     "min_v": 1, "max_v": 2,
-        #     "min_blockers": 1,
-        #     "min_steps": 3,
-        #     "count": count,
-        # },
-        # {
-        #     "name": "easy",
-        #     "min_h": 2, "max_h": 3,
-        #     "min_v": 2, "max_v": 3,
-        #     "min_blockers": 1,
-        #     "min_steps": 5,
-        #     "count": count,
-        # },
-        # {
-        #     "name": "medium",
-        #     "min_h": 3, "max_h": 4,
-        #     "min_v": 3, "max_v": 4,
-        #     "min_blockers": 2,
-        #     "min_steps": 7,
-        #     "count": count,
-        # },
-        # {
-        #     "name": "hard",
-        #     "min_h": 4, "max_h": 5,
-        #     "min_v": 4, "max_v": 5,
-        #     "min_blockers": 3,
-        #     "min_steps": 10,
-        #     "count": count,
-        # },
         {
-            "name": "very_hard",
-            "min_h": 4,
-            "max_h": 6,
-            "min_v": 4,
-            "max_v": 6,
-            "min_blockers": 2,
-            "min_steps": 18,
+            "min_h": 1, "max_h": 2,
+            "min_v": 1, "max_v": 2,
+            "min_blockers": 1,
+            "min_steps": 5,
             "count": count,
         },
         {
-            "name": "mega_hard",
-            "min_h": 5,
-            "max_h": 7,
-            "min_v": 5,
-            "max_v": 7,
-            "min_blockers": 2,
-            "min_steps": 24,
+            "min_h": 2, "max_h": 3,
+            "min_v": 2, "max_v": 3,
+            "min_blockers": 1,
+            "min_steps": 10,
+            "count": count,
+        },
+        {
+            "min_h": 2, "max_h": 4,
+            "min_v": 2, "max_v": 4,
+            "min_blockers": 1,
+            "min_steps": 15,
+            "count": count,
+        },
+        {
+            "min_h": 3, "max_h": 6,
+            "min_v": 3, "max_v": 6,
+            "min_blockers": 1,
+            "min_steps": 20,
+            "count": count,
+        },
+        {
+            "min_h": 5, "max_h": 8,
+            "min_v": 5, "max_v": 8,
+            "min_blockers": 1,
+            "min_steps": 25,
             "count": count,
         },
     ]
