@@ -6,10 +6,29 @@ output_file = "levels/llm_prompt.json"
 
 # Словари для случайной генерации
 action_synonyms = ["Сгенерируй", "Создай", "Сделай", "Подготовь"]
-block_words = ["блоков", "свечей"]
-horizontal_words = ["горизонтальн", "зелен"]
-vertical_words = ["вертикальн", "красн"]
+block_words = ["блок", "свеча"]
+horizontal_words = ["горизонтальный", "зеленый"]
+vertical_words = ["вертикальный", "красный"]
 size_words = ["небольшим количеством", "большим количеством"]
+
+
+def generate_block_relation(h_blocks, v_blocks, h_word, v_word, block_word):
+    h_count = len(h_blocks)
+    v_count = len(v_blocks)
+
+    if h_count > 0 and v_count > 0:
+        if h_count == v_count:
+            return f"{h_word}ых и {v_word}ых {block_word}ов приблизительно одинаково"
+        elif h_count > v_count:
+            return f"{h_word}ых {block_word}ов больше, чем {v_word}ых"
+        else:
+            return f"{h_word}ых {block_word}ов меньше, чем {v_word}ых"
+    elif h_count > 0:
+        return f"только {h_word}ые {block_word}ы"
+    elif v_count > 0:
+        return f"только {v_word}ые {block_word}ы"
+    else:
+        return ""
 
 
 def generate_human_prompt(level):
@@ -29,8 +48,8 @@ def generate_human_prompt(level):
     num_moves = len(moves.split())
     if num_moves <= 10:
         difficulty = "простой"
-    elif num_moves <= 30:
-        difficulty = "средний"
+    elif num_moves < 30:
+        difficulty = "средний по сложности"
     else:
         difficulty = "сложный"
 
@@ -41,7 +60,7 @@ def generate_human_prompt(level):
     else:
         blocks_desc = f"с {size_words[1]} {block_word}ов"
 
-    # Позиция ключа с градацией (чем меньше key_x, тем дальше от выхода)
+    # Позиция ключа с градацией
     if key_x <= 1:
         key_pos = "ключ находится далеко от выхода"
     elif key_x <= 3:
@@ -50,21 +69,11 @@ def generate_human_prompt(level):
         key_pos = "ключ находится близко к выходу"
 
     # Цвета/ориентация блоков
-    if h_blocks and v_blocks:
-        color_desc = f"{h_word}ых и {v_word}ых {block_word} примерно одинаково"
-    elif h_blocks:
-        color_desc = f"только {h_word}ые {block_word}ы"
-    elif v_blocks:
-        color_desc = f"только {v_word}ые {block_word}ы"
-    else:
-        color_desc = ""
+    color_desc = generate_block_relation(h_blocks, v_blocks, h_word, v_word, block_word)
 
     # Пустые клетки
     empty_cells = 36 - sum(h_blocks) - sum(v_blocks)
-    if empty_cells >= 18:
-        empty_desc = "много пустых клеток"
-    else:
-        empty_desc = "немного пустых клеток"
+    empty_desc = "много пустых клеток" if empty_cells >= 18 else "мало пустых клеток"
 
     # Формируем промпт
     prompt_parts = [difficulty + " уровень на поле 6x6", blocks_desc]
