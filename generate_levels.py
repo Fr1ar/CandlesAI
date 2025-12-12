@@ -264,6 +264,7 @@ def build_meta_compact(blocks, moves):
         "difficulty": difficulty,
     }
 
+
 # ------------------------ Master generation ------------------------
 
 

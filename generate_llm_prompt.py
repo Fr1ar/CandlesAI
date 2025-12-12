@@ -13,6 +13,7 @@ horizontal_words = ["горизонтальный", "зеленый"]
 vertical_words = ["вертикальный", "красный"]
 size_words = ["небольшим количеством", "большим количеством"]
 
+
 # Склонение существительных
 def plural_block_word(word, case="genitive"):
     if word == "блок":
@@ -21,16 +22,21 @@ def plural_block_word(word, case="genitive"):
         return "свечей" if case == "genitive" else "свечи"
     return word
 
+
 # Склонение прилагательных
 def adjective_form(adj, case="genitive"):
     # Простая логика для согласования с существительным во множественном числе
     mapping = {
-        "горизонтальный": {"nominative": "горизонтальные", "genitive": "горизонтальных"},
+        "горизонтальный": {
+            "nominative": "горизонтальные",
+            "genitive": "горизонтальных",
+        },
         "вертикальный": {"nominative": "вертикальные", "genitive": "вертикальных"},
         "зеленый": {"nominative": "зеленые", "genitive": "зеленых"},
-        "красный": {"nominative": "красные", "genitive": "красных"}
+        "красный": {"nominative": "красные", "genitive": "красных"},
     }
     return mapping.get(adj, {}).get(case, adj)
+
 
 def generate_block_relation(h_blocks, v_blocks, h_word, v_word, block_word):
     h_count = len(h_blocks)
@@ -41,7 +47,9 @@ def generate_block_relation(h_blocks, v_blocks, h_word, v_word, block_word):
 
     if h_count > 0 and v_count > 0:
         if h_count == v_count:
-            return f"{h_adj_gen} и {v_adj_gen} {block_word_gen} приблизительно одинаково"
+            return (
+                f"{h_adj_gen} и {v_adj_gen} {block_word_gen} приблизительно одинаково"
+            )
         elif h_count > v_count:
             return f"{h_adj_gen} {block_word_gen} больше, чем {v_adj_gen}"
         else:
@@ -52,6 +60,7 @@ def generate_block_relation(h_blocks, v_blocks, h_word, v_word, block_word):
         return f"только {v_adj_gen} {block_word_gen}"
     else:
         return ""
+
 
 def generate_human_prompt(level):
     meta = level["meta"]
@@ -107,6 +116,7 @@ def generate_human_prompt(level):
 
     prompt = action + " " + ", ".join(prompt_parts)
     return prompt
+
 
 # Загружаем JSON
 with open(input_file, "r", encoding="utf-8") as f:
