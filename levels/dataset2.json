@@ -10809,5 +10809,25 @@
       "moves": "t⮕ t⮕ z⬆ d⬇ f⬇ r⮕ p⮕ u⬇ 0⮕ z⬆ z⬆ z⬆ 0⬅ u⬆ t⬅ t⬅ t⬅ u⬇ 0⮕ z⬇ z⬇ p⬅ r⬅ f⬆ f⬆ s⬇ 0⮕ 0⮕ 0⮕",
       "difficulty": 6
     }
+  },{
+    "data": "k k - f f z.- b b u q z.0 0 - u q -.x r r e e o.x - l t t o.p p l - y y",
+    "meta": {
+      "h_blocks": [2,2,2,2,2,2,2,2],
+      "v_blocks": [2,2,2,2,2,2],
+      "key_x": 0,
+      "min_moves": 26,
+      "moves": "0⮕ k⮕ y⬅ o⬇ e⮕ x⬆ x⬆ r⬅ x⬆ 0⬅ u⬇ l⬆ l⬆ t⬅ t⬅ t⬅ u⬇ l⬇ 0⮕ 0⮕ x⬇ k⬅ f⬅ q⬆ 0⮕ 0⮕",
+      "difficulty": 6
+    }
+  },{
+    "data": "- - z z w w.a a - k q -.0 0 r k q m.f f r e e m.- - j o g g.b b j o - -",
+    "meta": {
+      "h_blocks": [2,2,2,2,2,2,2],
+      "v_blocks": [2,2,2,2,2,2],
+      "key_x": 0,
+      "min_moves": 29,
+      "moves": "z⬅ z⬅ k⬆ m⬆ e⮕ r⬆ j⬆ r⬆ j⬆ o⬆ o⬆ g⬅ g⬅ g⬅ g⬅ j⬇ 0⮕ j⬇ o⬇ 0⮕ o⬇ e⬅ e⬅ q⬇ q⬇ 0⮕ m⬇ m⬇ 0⮕",
+      "difficulty": 6
+    }
   }]
 }
