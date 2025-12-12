@@ -364,27 +364,27 @@ def run():
     file_path = "levels/dataset2.json"
     count = 1000
     settings = [
-        {
-            "min_h": 1, "max_h": 2,
-            "min_v": 1, "max_v": 2,
-            "min_blockers": 1,
-            "min_steps": 5,
-            "count": count,
-        },
-        {
-            "min_h": 2, "max_h": 3,
-            "min_v": 2, "max_v": 3,
-            "min_blockers": 1,
-            "min_steps": 10,
-            "count": count,
-        },
-        {
-            "min_h": 2, "max_h": 4,
-            "min_v": 2, "max_v": 4,
-            "min_blockers": 1,
-            "min_steps": 15,
-            "count": count,
-        },
+        # {
+        #     "min_h": 1, "max_h": 2,
+        #     "min_v": 1, "max_v": 2,
+        #     "min_blockers": 1,
+        #     "min_steps": 5,
+        #     "count": count,
+        # },
+        # {
+        #     "min_h": 2, "max_h": 3,
+        #     "min_v": 2, "max_v": 3,
+        #     "min_blockers": 1,
+        #     "min_steps": 10,
+        #     "count": count,
+        # },
+        # {
+        #     "min_h": 2, "max_h": 4,
+        #     "min_v": 2, "max_v": 4,
+        #     "min_blockers": 1,
+        #     "min_steps": 15,
+        #     "count": count,
+        # },
         {
             "min_h": 3, "max_h": 6,
             "min_v": 3, "max_v": 6,
