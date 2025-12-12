@@ -11,25 +11,45 @@ horizontal_words = ["горизонтальный", "зеленый"]
 vertical_words = ["вертикальный", "красный"]
 size_words = ["небольшим количеством", "большим количеством"]
 
+# Склонение существительных
+def plural_block_word(word, case="genitive"):
+    if word == "блок":
+        return "блоков" if case == "genitive" else "блоки"
+    elif word == "свеча":
+        return "свечей" if case == "genitive" else "свечи"
+    return word
+
+# Склонение прилагательных
+def adjective_form(adj, case="genitive"):
+    # Простая логика для согласования с существительным во множественном числе
+    mapping = {
+        "горизонтальный": {"nominative": "горизонтальные", "genitive": "горизонтальных"},
+        "вертикальный": {"nominative": "вертикальные", "genitive": "вертикальных"},
+        "зеленый": {"nominative": "зеленые", "genitive": "зеленых"},
+        "красный": {"nominative": "красные", "genitive": "красных"}
+    }
+    return mapping.get(adj, {}).get(case, adj)
 
 def generate_block_relation(h_blocks, v_blocks, h_word, v_word, block_word):
     h_count = len(h_blocks)
     v_count = len(v_blocks)
+    block_word_gen = plural_block_word(block_word, "genitive")
+    h_adj_gen = adjective_form(h_word, "genitive")
+    v_adj_gen = adjective_form(v_word, "genitive")
 
     if h_count > 0 and v_count > 0:
         if h_count == v_count:
-            return f"{h_word}ых и {v_word}ых {block_word}ов приблизительно одинаково"
+            return f"{h_adj_gen} и {v_adj_gen} {block_word_gen} приблизительно одинаково"
         elif h_count > v_count:
-            return f"{h_word}ых {block_word}ов больше, чем {v_word}ых"
+            return f"{h_adj_gen} {block_word_gen} больше, чем {v_adj_gen}"
         else:
-            return f"{h_word}ых {block_word}ов меньше, чем {v_word}ых"
+            return f"{h_adj_gen} {block_word_gen} меньше, чем {v_adj_gen}"
     elif h_count > 0:
-        return f"только {h_word}ые {block_word}ы"
+        return f"только {h_adj_gen} {block_word_gen}"
     elif v_count > 0:
-        return f"только {v_word}ые {block_word}ы"
+        return f"только {v_adj_gen} {block_word_gen}"
     else:
         return ""
-
 
 def generate_human_prompt(level):
     meta = level["meta"]
@@ -55,10 +75,11 @@ def generate_human_prompt(level):
 
     # Количество блоков
     total_blocks = len(h_blocks) + len(v_blocks)
+    block_word_gen = plural_block_word(block_word, "genitive")
     if total_blocks <= 4:
-        blocks_desc = f"с {size_words[0]} {block_word}ов"
+        blocks_desc = f"с {size_words[0]} {block_word_gen}"
     else:
-        blocks_desc = f"с {size_words[1]} {block_word}ов"
+        blocks_desc = f"с {size_words[1]} {block_word_gen}"
 
     # Позиция ключа с градацией
     if key_x <= 1:
@@ -84,7 +105,6 @@ def generate_human_prompt(level):
 
     prompt = action + " " + ", ".join(prompt_parts)
     return prompt
-
 
 # Загружаем JSON
 with open(input_file, "r", encoding="utf-8") as f:
