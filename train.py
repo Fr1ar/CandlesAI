@@ -62,12 +62,26 @@ class SaveEveryNStepsCallback(BaseCallback):
             self.last_save = self.num_timesteps
             path = f"{self.save_path}_{self.num_timesteps}.zip"
             self.model.save(path)
+
+            # Сохраняем текущее состояние обучения
+            self._save_training_state(path)
+
             self._log(f"Модель сохранена в {path}")
         return True
 
     def _log(self, text):
         if self.verbose:
             log(text)
+
+    def _save_training_state(self, path):
+        import zipfile
+        import json
+
+        data = {
+            "current_min_moves": current_min_moves,
+        }
+        with zipfile.ZipFile(path, "a") as archive:
+            archive.writestr("training_state.json", json.dumps(data))
 
 
 # ----------------- MULTI-LEVEL ENV -----------------
@@ -156,6 +170,7 @@ def get_checkpoint_files():
 
 # ----------------- ОСНОВНАЯ ФУНКЦИЯ -----------------
 def run():
+    global current_min_moves
     log("Начало тренировки...")
     os.makedirs("output", exist_ok=True)
 
@@ -201,6 +216,23 @@ def run():
             model = MaskablePPO.load(latest_checkpoint)
             model.set_env(env)
             resume = True
+
+            # --- Загрузка training_state.json ---
+            import zipfile
+            import json
+
+            try:
+                with zipfile.ZipFile(latest_checkpoint, "r") as archive:
+                    if "training_state.json" in archive.namelist():
+                        data = json.loads(archive.read("training_state.json"))
+                        current_min_moves = data.get("current_min_moves", 0)
+
+                        log(
+                            f"Восстановлено состояние: current_min_moves={current_min_moves}"
+                        )
+            except Exception as e:
+                log(f"Не удалось восстановить training_state.json: {e}")
+
         else:
             delete_checkpoints()
             log("Старые чекпойнты удалены. Начинаем обучение с нуля.")
