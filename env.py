@@ -160,7 +160,7 @@ def compute_reward_numba(
 class PuzzleEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, text_level=None, max_steps=100):
+    def __init__(self, text_level=None, max_steps=80):
         super().__init__()
         self.width = GRID_SIZE
         self.height = GRID_SIZE

@@ -121,8 +121,8 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         # --- Постепенное увеличение сложности ---
         self.total_steps_done += self.step_num
         if (
-                self.total_steps_done >= self.step_increment
-                and current_min_moves < self.max_min_moves
+            self.total_steps_done >= self.step_increment
+            and current_min_moves < self.max_min_moves
         ):
             self.total_steps_done = 0
             current_min_moves += 1

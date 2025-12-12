@@ -357,6 +357,88 @@ def generate_levels(settings, file_path, use_standard_json=False):
     return {"levels": levels_list}
 
 
+# ------------------------ Manual level parser ------------------------
+
+
+def parse_blocks_from_string(level_str):
+    """
+    Преобразует строку уровня в список блоков.
+    Уровень должен быть в формате: "- - a a.- b b.- - -"
+    """
+    rows = [r.split() for r in level_str.strip().split(".")]
+    blocks = {}
+    for y, row in enumerate(rows):
+        for x, cell in enumerate(row):
+            if cell == "-":
+                continue
+            if cell not in blocks:
+                blocks[cell] = []
+            blocks[cell].append((x, y))
+
+    result = []
+    for bid, cells in blocks.items():
+        if bid == "-":
+            continue
+
+        xs = [p[0] for p in cells]
+        ys = [p[1] for p in cells]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+
+        if len(set(ys)) == 1:
+            orient = "H"
+            length = max_x - min_x + 1
+            x = min_x
+            y = ys[0]
+        elif len(set(xs)) == 1:
+            orient = "V"
+            length = max_y - min_y + 1
+            x = xs[0]
+            y = min_y
+        else:
+            continue  # пропускаем некорректные блоки
+
+        result.append(Block(bid, orient, length, x, y))
+
+    return result
+
+
+def build_levels_from_strings(level_strings):
+    result = []
+
+    for level_str in level_strings:
+        print(f"Level = {level_str}")
+        blocks = parse_blocks_from_string(level_str)
+
+        # решаем BFS
+        moves, steps = solve_with_moves(blocks)
+
+        if moves is None:
+            meta = {
+                "h_blocks": [],
+                "v_blocks": [],
+                "key_x": None,
+                "min_moves": None,
+                "moves": "",
+                "difficulty": 0,
+            }
+        else:
+            meta = build_meta_compact(blocks, moves)
+
+        entry = {
+            "data": level_str,
+            "meta": meta,
+        }
+        result.append(entry)
+
+    save_json(
+        {"levels": result},
+        "levels/custom_levels.json",
+        indent=2,
+        use_standard_json=False,
+    )
+
+
 # ------------------------ Usage ------------------------
 
 
@@ -364,33 +446,33 @@ def run():
     file_path = "levels/dataset2.json"
     count = 1000
     settings = [
-        # {
-        #     "min_h": 1,
-        #     "max_h": 2,
-        #     "min_v": 1,
-        #     "max_v": 2,
-        #     "min_blockers": 1,
-        #     "min_steps": 5,
-        #     "count": count,
-        # },
-        # {
-        #     "min_h": 2,
-        #     "max_h": 3,
-        #     "min_v": 2,
-        #     "max_v": 3,
-        #     "min_blockers": 1,
-        #     "min_steps": 10,
-        #     "count": count,
-        # },
-        # {
-        #     "min_h": 2,
-        #     "max_h": 4,
-        #     "min_v": 2,
-        #     "max_v": 4,
-        #     "min_blockers": 1,
-        #     "min_steps": 15,
-        #     "count": count,
-        # },
+        {
+            "min_h": 1,
+            "max_h": 2,
+            "min_v": 1,
+            "max_v": 2,
+            "min_blockers": 1,
+            "min_steps": 5,
+            "count": count / 2,
+        },
+        {
+            "min_h": 2,
+            "max_h": 3,
+            "min_v": 2,
+            "max_v": 3,
+            "min_blockers": 1,
+            "min_steps": 10,
+            "count": count / 2,
+        },
+        {
+            "min_h": 2,
+            "max_h": 4,
+            "min_v": 2,
+            "max_v": 4,
+            "min_blockers": 1,
+            "min_steps": 15,
+            "count": count / 2,
+        },
         {
             "min_h": 3,
             "max_h": 6,
@@ -417,3 +499,4 @@ def run():
 
 if __name__ == "__main__":
     run()
+    # build_levels_from_strings(level_strings = [])
