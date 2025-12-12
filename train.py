@@ -98,7 +98,7 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         difficult_indices = np.flatnonzero(difficult_mask)
 
         # Если почему-то ничего не подошло
-        if simple_indices == 0:
+        if simple_indices.size == 0:
             simple_indices = np.arange(self.num_levels)
         if difficult_indices.size == 0:
             difficult_indices = np.arange(self.num_levels)
