@@ -23,7 +23,9 @@ log_every_n_timesteps = 100_000
 # Через сколько шагов увеличивать сложность
 min_moves_increment_timesteps = 10_000_000
 # Начальная сложность
-global_current_min_moves = 0
+current_min_moves = 0
+# Шанс, что агенту попадётся простой уровень
+simple_level_chance = 0.2
 
 final_model = "puzzle_model"
 final_model_file = f"{final_model}.zip"
@@ -50,7 +52,7 @@ class SaveEveryNStepsCallback(BaseCallback):
     def _on_step(self) -> bool:
         if 0 < log_every_n_timesteps < self.num_timesteps - self.last_log_timestep:
             self._log(
-                f"Шаг = {self.num_timesteps + 1:,}, (сложность = {global_current_min_moves})"
+                f"Шаг = {self.num_timesteps + 1:,}, (сложность = {current_min_moves})"
             )
             self.last_log_timestep = self.num_timesteps
 
@@ -83,34 +85,49 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         self.num_levels = len(levels)
 
     def reset(self, seed=None, options=None):
-        global global_current_min_moves
-        # --- eligible levels ---
-        eligible_mask = self.min_moves_array <= global_current_min_moves
-        eligible_indices = np.flatnonzero(eligible_mask)
+        global current_min_moves, simple_level_chance
 
-        if eligible_indices.size == 0:
-            eligible_indices = np.arange(self.num_levels)
+        # Уровни проще текущей сложности
+        simple_mask = self.min_moves_array <= current_min_moves
+        simple_indices = np.flatnonzero(simple_mask)
 
-        chosen_idx = random.choice(eligible_indices)
+        # Уровни сложнее текущей сложности
+        difficult_mask = self.min_moves_array <= current_min_moves
+        difficult_indices = np.flatnonzero(difficult_mask)
+
+        # Если почему-то ничего не подошло
+        if simple_indices == 0:
+            simple_indices = np.arange(self.num_levels)
+        if difficult_indices.size == 0:
+            difficult_indices = np.arange(self.num_levels)
+
+        # Берём простой уровень с шансом simple_level_chance
+        if simple_indices.size > 0 and random.random() < simple_level_chance:
+            chosen_idx = random.choice(simple_indices)
+            level_type = "легкий"
+        else:
+            chosen_idx = random.choice(difficult_indices)
+            level_type = "сложный"
+
         current_level = self.levels[chosen_idx]
-
         self.text_level = current_level["data"]
+
         meta = current_level.get("meta", {})
         min_moves = meta.get("min_moves", 0)
 
         if self.logging_enabled:
-            log(f"Сложность уровня: {min_moves}")
+            log(f"Сложность уровня: {min_moves}, тип: {level_type}")
 
         # --- Постепенное увеличение сложности ---
         self.total_steps_done += self.step_num
         if (
-            self.total_steps_done >= self.step_increment
-            and global_current_min_moves < self.max_min_moves
+                self.total_steps_done >= self.step_increment
+                and current_min_moves < self.max_min_moves
         ):
             self.total_steps_done = 0
-            global_current_min_moves += 1
+            current_min_moves += 1
             if self.logging_enabled:
-                log(f"Увеличиваем сложность: {global_current_min_moves}")
+                log(f"Увеличиваем сложность: {current_min_moves}")
 
         return super().reset(seed=seed, options=options)
 
