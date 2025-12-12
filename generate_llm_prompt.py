@@ -1,6 +1,8 @@
 import json
 import random
 
+from parser import save_json
+
 input_file = "levels/dataset.json"
 output_file = "levels/llm_prompt.json"
 
@@ -115,7 +117,11 @@ for level in data.get("levels", []):
     level["text"] = generate_human_prompt(level)
 
 # Сохраняем новый JSON
-with open(output_file, "w", encoding="utf-8") as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
+save_json(
+    data,
+    output_file,
+    indent=2,
+    use_standard_json=False,
+)
 
 print(f"Сохранено в {output_file}")

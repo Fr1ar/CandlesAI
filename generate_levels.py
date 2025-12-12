@@ -3,6 +3,7 @@ from collections import deque, namedtuple
 import os
 
 from arrows import LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW
+from parser import save_json
 
 WIDTH = HEIGHT = 6
 KEY_ID = "0"
@@ -262,40 +263,6 @@ def build_meta_compact(blocks, moves):
         "moves": moves_str,
         "difficulty": difficulty,
     }
-
-
-# ------------------------ JSON writer ------------------------
-
-
-def _dump_compact_arrays(obj, f, indent=2):
-    def _serialize(o, level=0):
-        if isinstance(o, dict):
-            items = []
-            for k, v in o.items():
-                items.append(
-                    " " * (level * indent)
-                    + json.dumps(k, ensure_ascii=False)
-                    + ": "
-                    + _serialize(v, level + 1)
-                )
-            pad = " " * ((level - 1) * indent) if level > 0 else ""
-            return "{\n" + ",\n".join(items) + "\n" + pad + "}"
-        elif isinstance(o, list):
-            return "[" + ",".join(_serialize(x, level + 1) for x in o) + "]"
-        else:
-            return json.dumps(o, ensure_ascii=False)
-
-    f.write(_serialize(obj))
-
-
-def save_json(obj, file_path, indent=2, use_standard_json=False):
-    if use_standard_json:
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(obj, f, ensure_ascii=False, indent=indent)
-    else:
-        with open(file_path, "w", encoding="utf-8") as f:
-            _dump_compact_arrays(obj, f, indent=indent)
-
 
 # ------------------------ Master generation ------------------------
 
