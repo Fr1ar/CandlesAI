@@ -24,6 +24,8 @@ log_every_n_timesteps = 100_000
 min_moves_increment_timesteps = 10_000_000
 # Начальная сложность
 current_min_moves = 0
+# Максимальная сложность
+max_min_moves = 30
 # Шанс, что агенту попадётся простой уровень
 simple_level_chance = 0.2
 
@@ -123,6 +125,7 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         if (
             self.total_steps_done >= self.step_increment
             and current_min_moves < self.max_min_moves
+            and current_min_moves <= max_min_moves
         ):
             self.total_steps_done = 0
             current_min_moves += 1
