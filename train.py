@@ -50,23 +50,33 @@ class SaveEveryNStepsCallback(BaseCallback):
         self.save_path = save_path
         self.last_save = 0
         self.last_log_timestep = 0
+        self.last_min_moves_changed_timestep = 0
 
     def _on_step(self) -> bool:
+        global current_min_moves, max_min_moves
         if 0 < log_every_n_timesteps < self.num_timesteps - self.last_log_timestep:
             self._log(
                 f"Шаг = {self.num_timesteps + 1:,}, (сложность = {current_min_moves})"
             )
             self.last_log_timestep = self.num_timesteps
 
+        if (
+            current_min_moves < max_min_moves
+            and self.num_timesteps - self.last_min_moves_changed_timestep
+            >= min_moves_increment_timesteps
+        ):
+            self.last_min_moves_changed_timestep = self.num_timesteps
+            current_min_moves += 1
+            self._log(f"Увеличиваем сложность: {current_min_moves}")
+
         if self.num_timesteps - self.last_save >= self.save_freq:
             self.last_save = self.num_timesteps
             path = f"{self.save_path}_{self.num_timesteps}.zip"
             self.model.save(path)
-
             # Сохраняем текущее состояние обучения
             self._save_training_state(path)
-
             self._log(f"Модель сохранена в {path}")
+
         return True
 
     def _log(self, text):
@@ -108,7 +118,7 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         simple_indices = np.flatnonzero(simple_mask)
 
         # Уровни сложнее текущей сложности
-        difficult_mask = self.min_moves_array <= current_min_moves
+        difficult_mask = self.min_moves_array >= current_min_moves
         difficult_indices = np.flatnonzero(difficult_mask)
 
         # Если почему-то ничего не подошло
@@ -132,19 +142,9 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         min_moves = meta.get("min_moves", 0)
 
         if self.logging_enabled:
-            log(f"Сложность уровня: {min_moves}, тип: {level_type}")
-
-        # --- Постепенное увеличение сложности ---
-        self.total_steps_done += self.step_num
-        if (
-            self.total_steps_done >= self.step_increment
-            and current_min_moves < self.max_min_moves
-            and current_min_moves <= max_min_moves
-        ):
-            self.total_steps_done = 0
-            current_min_moves += 1
-            if self.logging_enabled:
-                log(f"Увеличиваем сложность: {current_min_moves}")
+            log(
+                f"Сложность уровня: {min_moves}, тип: {level_type} (общая сложность: {current_min_moves})"
+            )
 
         return super().reset(seed=seed, options=options)
 
