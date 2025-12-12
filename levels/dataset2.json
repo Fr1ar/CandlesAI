@@ -10669,5 +10669,145 @@
       "moves": "h⬅ w⮕ f⮕ o⬇ o⬇ i⬇ i⬇ 0⬅ l⬇ l⬇ y⬅ z⬇ j⮕ j⮕ j⮕ z⬆ 0⮕ i⬆ h⬅ i⬆ f⬅ i⬆ 0⬅ z⬇ j⬅ j⬅ z⬇ y⬅ y⬅ l⬆ l⬆ z⬇ 0⮕ 0⮕ g⬆ g⬆ x⬆ x⬆ 0⮕ 0⮕",
       "difficulty": 8
     }
+  },{
+    "data": "f j m m i i.f j h c z z.0 0 h c - -.- p y y - s.l p g g d s.l k k - d -",
+    "meta": {
+      "h_blocks": [2,2,2,2,2,2],
+      "v_blocks": [2,2,2,2,2,2,2,2],
+      "key_x": 0,
+      "min_moves": 29,
+      "moves": "k⮕ s⬆ d⬆ d⬆ g⮕ g⮕ p⬇ y⬅ y⬅ h⬇ h⬇ 0⮕ c⬇ z⬅ z⬅ s⬆ d⬆ c⬇ 0⮕ j⬇ m⬅ i⬅ s⬆ f⬇ m⬅ i⬅ d⬆ 0⮕ 0⮕",
+      "difficulty": 6
+    }
+  },{
+    "data": "- k k k k r.h h l - - r.0 0 l - y b.e e - i y b.w - - i u u.w c c q q -",
+    "meta": {
+      "h_blocks": [2,4,2,2,2,2],
+      "v_blocks": [2,2,2,2,2,2],
+      "key_x": 0,
+      "min_moves": 33,
+      "moves": "e⮕ y⬆ i⬆ u⬅ i⬆ e⮕ e⮕ b⬇ b⬇ e⮕ i⬇ l⬇ h⮕ l⬇ 0⮕ w⬆ w⬆ w⬆ w⬆ 0⬅ l⬆ u⬅ u⬅ u⬅ i⬇ l⬇ 0⮕ 0⮕ w⬇ k⬅ y⬆ 0⮕ 0⮕",
+      "difficulty": 7
+    }
+  },{
+    "data": "- - g g l -.- - k k l q.0 0 e p l q.f - e p - -.f b m m u u.- b - w w w",
+    "meta": {
+      "h_blocks": [2,2,2,2,3],
+      "v_blocks": [2,2,2,3,2,2],
+      "key_x": 0,
+      "min_moves": 25,
+      "moves": "k⬅ k⬅ g⬅ g⬅ w⬅ e⬆ e⬆ 0⮕ f⬆ b⬆ w⬅ l⬇ q⬆ p⬆ p⬆ 0⮕ b⬆ m⬅ m⬅ u⬅ u⬅ l⬇ l⬇ 0⮕ 0⮕",
+      "difficulty": 6
+    }
+  },{
+    "data": "p v v - - f.p - j j - f.0 0 m - - f.- - m e o o.l a i e d d.l a i x x -",
+    "meta": {
+      "h_blocks": [2,2,2,2,2],
+      "v_blocks": [2,3,2,2,2,2,2],
+      "key_x": 0,
+      "min_moves": 25,
+      "moves": "x⮕ v⮕ v⮕ j⮕ m⬆ m⬆ 0⮕ e⬇ o⬅ o⬅ o⬅ f⬇ v⮕ e⬆ x⬅ e⬆ d⬅ f⬇ j⮕ f⬇ e⬆ e⬆ 0⮕ 0⮕ 0⮕",
+      "difficulty": 6
+    }
+  },{
+    "data": "b l l k f -.b - j k f z.0 0 j - - z.i i w g g -.e e w - - u.- c c h h u",
+    "meta": {
+      "h_blocks": [2,2,2,2,2,2],
+      "v_blocks": [2,2,2,2,2,2,2],
+      "key_x": 0,
+      "min_moves": 30,
+      "moves": "c⬅ z⬆ f⬇ k⬇ l⮕ l⮕ j⬆ w⬆ e⮕ e⮕ e⮕ w⬇ 0⮕ w⬇ i⮕ b⬇ b⬇ b⬇ 0⬅ j⬇ l⬅ l⬅ l⬅ f⬆ k⬆ j⬆ 0⮕ 0⮕ 0⮕ 0⮕",
+      "difficulty": 6
+    }
+  },{
+    "data": "g l k k - -.g l d d - t.- 0 0 b a t.f f f b a x.m - p y y x.m - p - r r",
+    "meta": {
+      "h_blocks": [2,2,2,2,3],
+      "v_blocks": [2,2,2,2,2,2,2,2],
+      "key_x": 1,
+      "min_moves": 28,
+      "moves": "a⬆ a⬆ t⬆ x⬆ y⮕ b⬇ 0⮕ l⬇ k⬅ b⬇ f⮕ f⮕ l⬇ d⬅ l⬇ 0⬅ l⬇ f⬅ f⬅ b⬆ b⬆ y⬅ b⬆ b⬆ 0⮕ 0⮕ x⬇ 0⮕",
+      "difficulty": 6
+    }
+  },{
+    "data": "e a a a a -.e - n f y y.0 0 n f - -.q - - - s s.q w w - p z.- - m m p z",
+    "meta": {
+      "h_blocks": [2,2,2,2,4],
+      "v_blocks": [2,2,2,2,2,2],
+      "key_x": 0,
+      "min_moves": 28,
+      "moves": "w⮕ s⬅ s⬅ s⬅ p⬆ p⬆ w⮕ f⬇ y⬅ z⬆ z⬆ w⮕ f⬇ z⬆ z⬆ q⬇ s⬅ n⬇ y⬅ p⬆ n⬇ 0⮕ 0⮕ e⬇ a⬅ p⬆ 0⮕ 0⮕",
+      "difficulty": 6
+    }
+  },{
+    "data": "w q s d d b.w q s o - b.0 0 s o r f.t a a - r f.t - k k - -.- z z - l l",
+    "meta": {
+      "h_blocks": [2,2,2,2,2],
+      "v_blocks": [2,2,2,2,2,2,3,2],
+      "key_x": 0,
+      "min_moves": 28,
+      "moves": "a⮕ k⮕ z⬅ r⬆ a⮕ f⬇ s⬇ s⬇ s⬇ 0⮕ b⬇ d⮕ o⬆ 0⮕ q⬇ q⬇ q⬇ 0⬅ o⬇ d⬅ d⬅ d⬅ r⬆ o⬆ 0⮕ 0⮕ b⬆ 0⮕",
+      "difficulty": 6
+    }
+  },{
+    "data": "u - y y - -.u - - r b b.- 0 0 r - -.e e - r f f.- v - - o p.- v q q o p",
+    "meta": {
+      "h_blocks": [2,2,2,2,2],
+      "v_blocks": [2,3,2,2,2],
+      "key_x": 1,
+      "min_moves": 27,
+      "moves": "y⬅ r⬇ b⬅ b⬅ b⬅ r⬆ r⬆ f⬅ f⬅ o⬆ q⮕ o⬆ o⬆ f⮕ o⬆ p⬆ q⮕ p⬆ p⬆ f⮕ r⬇ r⬇ r⬇ 0⮕ 0⮕ p⬆ 0⮕",
+      "difficulty": 5
+    }
+  },{
+    "data": "e v v v j -.e l l - j w.0 0 y - k w.a a y - k -.- c - t t b.- c - p p b",
+    "meta": {
+      "h_blocks": [3,2,2,2,2],
+      "v_blocks": [2,2,2,2,2,2,2],
+      "key_x": 0,
+      "min_moves": 40,
+      "moves": "t⬅ l⮕ p⬅ k⬇ k⬇ j⬇ v⮕ v⮕ j⬇ l⮕ y⬆ a⮕ a⮕ y⬆ 0⮕ 0⮕ c⬆ c⬆ t⬅ t⬅ c⬆ a⬅ a⬅ c⬆ 0⬅ 0⬅ y⬇ v⬅ y⬇ l⬅ y⬇ 0⮕ 0⮕ c⬇ v⬅ w⬆ j⬆ j⬆ 0⮕ 0⮕",
+      "difficulty": 8
+    }
+  },{
+    "data": "t t t t - -.- - k k o o.0 0 j - - -.c - j - y y.c p p s e a.- l l s e a",
+    "meta": {
+      "h_blocks": [2,2,2,2,2,4],
+      "v_blocks": [2,2,2,2,2],
+      "key_x": 0,
+      "min_moves": 30,
+      "moves": "k⬅ o⬅ k⬅ y⬅ a⬆ a⬆ a⬆ a⬆ c⬇ j⬆ y⬅ y⬅ y⬅ s⬆ s⬆ p⮕ e⬆ e⬆ p⮕ p⮕ s⬇ j⬇ o⬅ e⬆ e⬆ j⬇ 0⮕ 0⮕ 0⮕ 0⮕",
+      "difficulty": 6
+    }
+  },{
+    "data": "- - q r r r.s s q l p -.f 0 0 l p g.f - x i i g.- o x - c c.- o a a - -",
+    "meta": {
+      "h_blocks": [2,2,3,2,2],
+      "v_blocks": [2,2,2,2,2,2,2],
+      "key_x": 1,
+      "min_moves": 52,
+      "moves": "a⮕ a⮕ x⬇ i⬅ i⬅ f⬇ 0⬅ f⬇ i⬅ p⬇ q⬇ q⬇ s⮕ l⬇ s⮕ s⮕ q⬆ i⮕ f⬆ q⬆ 0⮕ f⬆ f⬆ f⬆ l⬇ 0⮕ l⬇ i⮕ o⬆ o⬆ o⬆ i⬅ i⬅ x⬆ l⬆ o⬆ 0⬅ 0⬅ x⬆ l⬆ c⬅ c⬅ c⬅ c⬅ g⬇ x⬇ 0⮕ p⬇ l⬇ 0⮕ 0⮕ 0⮕",
+      "difficulty": 9
+    }
+  },{
+    "data": "- n - s s d.- n w w i d.0 0 c x i d.- - c x e e.b b l l - -.k k - f f -",
+    "meta": {
+      "h_blocks": [2,2,2,2,2,2,2],
+      "v_blocks": [2,3,2,2,2],
+      "key_x": 0,
+      "min_moves": 34,
+      "moves": "l⮕ l⮕ f⮕ x⬇ x⬇ e⬅ d⬇ s⮕ c⬇ c⬇ e⬅ e⬅ e⬅ x⬆ f⬅ x⬆ l⬅ d⬇ d⬇ c⬆ c⬆ l⬅ i⬇ w⮕ w⮕ x⬆ x⬆ c⬆ c⬆ 0⮕ 0⮕ i⬇ 0⮕ 0⮕",
+      "difficulty": 7
+    }
+  },{
+    "data": "- k k - - -.p p p r r f.0 0 u s - f.- - u s - d.z t t - - d.z - y y y -",
+    "meta": {
+      "h_blocks": [2,3,3,2,2],
+      "v_blocks": [2,2,2,2,2],
+      "key_x": 0,
+      "min_moves": 29,
+      "moves": "t⮕ t⮕ z⬆ d⬇ f⬇ r⮕ p⮕ u⬇ 0⮕ z⬆ z⬆ z⬆ 0⬅ u⬆ t⬅ t⬅ t⬅ u⬇ 0⮕ z⬇ z⬇ p⬅ r⬅ f⬆ f⬆ s⬇ 0⮕ 0⮕ 0⮕",
+      "difficulty": 6
+    }
   }]
 }

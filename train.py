@@ -21,8 +21,9 @@ checkpoint_freq = 100_000_000
 # Как часто выводить в лог количество шагов
 log_every_n_timesteps = 100_000
 # Через сколько шагов увеличивать сложность
-min_step_increment = 10_000_000
-
+min_moves_increment_timesteps = 10_000_000
+# Начальная сложность
+global_current_min_moves = 0
 
 final_model = "puzzle_model"
 final_model_file = f"{final_model}.zip"
@@ -48,7 +49,9 @@ class SaveEveryNStepsCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if 0 < log_every_n_timesteps < self.num_timesteps - self.last_log_timestep:
-            self._log(f"Шаг = {self.num_timesteps + 1:,}")
+            self._log(
+                f"Шаг = {self.num_timesteps + 1:,}, (сложность = {global_current_min_moves})"
+            )
             self.last_log_timestep = self.num_timesteps
 
         if self.num_timesteps - self.last_save >= self.save_freq:
@@ -65,11 +68,10 @@ class SaveEveryNStepsCallback(BaseCallback):
 
 # ----------------- MULTI-LEVEL ENV -----------------
 class SequentialMultiLevelEnv(PuzzleEnv):
-    def __init__(self, levels, step_increment=min_step_increment):
+    def __init__(self, levels, step_increment=min_moves_increment_timesteps):
         super().__init__(text_level=None)
         self.levels = levels
         self.step_increment = step_increment
-        self.current_min_moves = 0
         self.total_steps_done = 0
         self.logging_enabled = True
 
@@ -81,8 +83,9 @@ class SequentialMultiLevelEnv(PuzzleEnv):
         self.num_levels = len(levels)
 
     def reset(self, seed=None, options=None):
+        global global_current_min_moves
         # --- eligible levels ---
-        eligible_mask = self.min_moves_array <= self.current_min_moves
+        eligible_mask = self.min_moves_array <= global_current_min_moves
         eligible_indices = np.flatnonzero(eligible_mask)
 
         if eligible_indices.size == 0:
@@ -93,22 +96,21 @@ class SequentialMultiLevelEnv(PuzzleEnv):
 
         self.text_level = current_level["data"]
         meta = current_level.get("meta", {})
-        difficulty = meta.get("difficulty")
         min_moves = meta.get("min_moves", 0)
 
         if self.logging_enabled:
-            log(f"min_moves={min_moves}, difficulty={difficulty}")
+            log(f"Сложность уровня: {min_moves}")
 
         # --- Постепенное увеличение сложности ---
         self.total_steps_done += self.step_num
         if (
             self.total_steps_done >= self.step_increment
-            and self.current_min_moves < self.max_min_moves
+            and global_current_min_moves < self.max_min_moves
         ):
-            self.current_min_moves += 1
             self.total_steps_done = 0
+            global_current_min_moves += 1
             if self.logging_enabled:
-                log(f"Увеличиваем current_min_moves: {self.current_min_moves}")
+                log(f"Увеличиваем сложность: {global_current_min_moves}")
 
         return super().reset(seed=seed, options=options)
 
@@ -125,7 +127,7 @@ def delete_checkpoints():
     for f in files:
         os.remove(f)
     if files:
-        log(f"Удалено {len(files)} старых чекпойнтов.")
+        log(f"Удалено {len(files)} старых чекпойнтов")
 
 
 def get_checkpoint_files():
