@@ -15,19 +15,19 @@ from parser import load_levels
 # количество параллельных сред
 n_envs = 16
 # Сколько всего шагов
-total_timesteps = 10_000_000_000
+total_timesteps = 10_000_000
 # Через сколько шагов делать чекпойнт
-checkpoint_freq = 100_000_000
+checkpoint_freq = 100_000
 # Как часто выводить в лог количество шагов
-log_every_n_timesteps = 100_000
+log_every_n_timesteps = 1_000
 # Через сколько шагов увеличивать сложность
-min_moves_increment_timesteps = 50_000_000
+min_moves_increment_timesteps = 50_000
 # Начальная сложность
 current_min_moves = 0
 # Максимальная сложность
 max_min_moves = 30
 # Шанс, что агенту попадётся простой уровень
-simple_level_chance = 0.2
+simple_level_chance = 0.15
 
 final_model = "puzzle_model"
 final_model_file = f"{final_model}.zip"
