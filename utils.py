@@ -136,7 +136,9 @@ def log_action_mask(env, step, total_steps):
             print(f" • Блок '{block_name}' можно двигать: {' '.join(allowed_dirs)}")
 
 
-def log_action(action, env, moved, reward, cur_dist, prev_block_pos=None, direction=None):
+def log_action(
+    action, env, moved, reward, cur_dist, prev_block_pos=None, direction=None
+):
     action_text = action_to_text(action, env)
     if not moved:
         print(f"{action_text} блок не сдвинулся, штраф {reward:.2f}")
@@ -149,6 +151,6 @@ def log_action(action, env, moved, reward, cur_dist, prev_block_pos=None, direct
 
 def log_level(env, text_level, cur_dist):
     print(f'Уровень: "{text_level}"')
-    print(f'Шагов до решения: {cur_dist}')
+    print(f"Шагов до решения: {cur_dist}")
     render_pretty_colored(env)
     print("-" * 40)

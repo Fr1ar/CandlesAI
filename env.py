@@ -11,9 +11,11 @@ FEATURES_PER_BLOCK = 6
 OBS_SIZE = MAX_BLOCKS * FEATURES_PER_BLOCK
 GRID_SIZE = 6
 
+
 # ----------------- STATE ENCODING -----------------
 def encode_state(all_x, all_y, num_blocks):
     return tuple(all_x[:num_blocks]) + tuple(all_y[:num_blocks])
+
 
 # ----------------- NUMBA COLLISION CHECK -----------------
 @njit
@@ -38,6 +40,7 @@ def check_collision_numba(
         ):
             return False
     return True
+
 
 # ----------------- NUMBA CAN_MOVE -----------------
 @njit
@@ -68,6 +71,7 @@ def can_move_numba(all_x, all_y, all_w, all_h, types, idx, direction, num_blocks
         num_blocks,
     )
 
+
 # ----------------- NUMBA ACTION MASK -----------------
 @njit
 def compute_action_mask(all_x, all_y, all_w, all_h, types, num_blocks):
@@ -79,6 +83,7 @@ def compute_action_mask(all_x, all_y, all_w, all_h, types, num_blocks):
             ):
                 mask[idx * 2 + direction] = 1
     return mask
+
 
 # ----------------- NUMBA GET_OBS -----------------
 @njit
@@ -93,10 +98,12 @@ def get_obs_numba(all_x, all_y, all_w, all_h, types, is_key_flags, num_blocks):
         obs[i, 5] = is_key_flags[i]
     return obs.flatten()
 
+
 # ----------------- NUMBA is_solved -----------------
 @njit
 def is_solved_numba(all_x, all_w, key_index):
     return all_x[key_index] + all_w[key_index] - 1 == GRID_SIZE - 1
+
 
 # ----------------- NUMBA reverse/invalid -----------------
 @njit
@@ -107,6 +114,7 @@ def check_action_flags_numba(last_block_idx, last_dir, current_block_idx, curren
         if last_block_idx == current_block_idx and last_dir != current_dir:
             reverse = 1
     return invalid, reverse
+
 
 # ----------------- NUMBA reward -----------------
 @njit
@@ -142,6 +150,7 @@ def compute_reward_numba(
         reward -= 5.0
     return reward
 
+
 # ======================= BFS SOLVER =======================
 @njit
 def apply_move_numba(all_x, all_y, idx, direction, types):
@@ -149,6 +158,7 @@ def apply_move_numba(all_x, all_y, idx, direction, types):
         all_x[idx] += 1 if direction == 1 else -1
     else:
         all_y[idx] += 1 if direction == 1 else -1
+
 
 def solve_level_bfs(env):
     num_blocks = env.num_blocks
@@ -170,8 +180,16 @@ def solve_level_bfs(env):
 
         for idx in range(num_blocks):
             for direction in (0, 1):
-                if not can_move_numba(all_x, all_y, env.all_w, env.all_h,
-                                      env.types, idx, direction, num_blocks):
+                if not can_move_numba(
+                    all_x,
+                    all_y,
+                    env.all_w,
+                    env.all_h,
+                    env.types,
+                    idx,
+                    direction,
+                    num_blocks,
+                ):
                     continue
 
                 nx = all_x.copy()
@@ -185,9 +203,11 @@ def solve_level_bfs(env):
 
     return 0  # если решение не найдено
 
+
 # ========================================================================
 # ===========================   ENV CLASS   ===============================
 # ========================================================================
+
 
 class PuzzleEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
@@ -381,8 +401,13 @@ class PuzzleEnv(gym.Env):
 
         # Приблизился ли к решению головоломки
         step_to_solution = 0
-        if self.prev_dist_to_solution is not None and cur_dist < self.prev_dist_to_solution:
-            step_to_solution = (self.dist_to_solution - cur_dist) / self.dist_to_solution
+        if (
+            self.prev_dist_to_solution is not None
+            and cur_dist < self.prev_dist_to_solution
+        ):
+            step_to_solution = (
+                self.dist_to_solution - cur_dist
+            ) / self.dist_to_solution
             # print(f"step_to_solution: {step_to_solution:.2f}")
             self.prev_dist_to_solution = cur_dist
 
