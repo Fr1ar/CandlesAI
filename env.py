@@ -11,11 +11,9 @@ FEATURES_PER_BLOCK = 6
 OBS_SIZE = MAX_BLOCKS * FEATURES_PER_BLOCK
 GRID_SIZE = 6
 
-
 # ----------------- STATE ENCODING -----------------
 def encode_state(all_x, all_y, num_blocks):
     return tuple(all_x[:num_blocks]) + tuple(all_y[:num_blocks])
-
 
 # ----------------- NUMBA COLLISION CHECK -----------------
 @njit
@@ -40,7 +38,6 @@ def check_collision_numba(
         ):
             return False
     return True
-
 
 # ----------------- NUMBA CAN_MOVE -----------------
 @njit
@@ -71,7 +68,6 @@ def can_move_numba(all_x, all_y, all_w, all_h, types, idx, direction, num_blocks
         num_blocks,
     )
 
-
 # ----------------- NUMBA ACTION MASK -----------------
 @njit
 def compute_action_mask(all_x, all_y, all_w, all_h, types, num_blocks):
@@ -83,7 +79,6 @@ def compute_action_mask(all_x, all_y, all_w, all_h, types, num_blocks):
             ):
                 mask[idx * 2 + direction] = 1
     return mask
-
 
 # ----------------- NUMBA GET_OBS -----------------
 @njit
@@ -98,12 +93,10 @@ def get_obs_numba(all_x, all_y, all_w, all_h, types, is_key_flags, num_blocks):
         obs[i, 5] = is_key_flags[i]
     return obs.flatten()
 
-
 # ----------------- NUMBA is_solved -----------------
 @njit
 def is_solved_numba(all_x, all_w, key_index):
     return all_x[key_index] + all_w[key_index] - 1 == GRID_SIZE - 1
-
 
 # ----------------- NUMBA reverse/invalid -----------------
 @njit
@@ -114,7 +107,6 @@ def check_action_flags_numba(last_block_idx, last_dir, current_block_idx, curren
         if last_block_idx == current_block_idx and last_dir != current_dir:
             reverse = 1
     return invalid, reverse
-
 
 # ----------------- NUMBA reward -----------------
 @njit
@@ -150,7 +142,6 @@ def compute_reward_numba(
         reward -= 5.0
     return reward
 
-
 # ======================= BFS SOLVER =======================
 @njit
 def apply_move_numba(all_x, all_y, idx, direction, types):
@@ -159,7 +150,6 @@ def apply_move_numba(all_x, all_y, idx, direction, types):
     else:
         all_y[idx] += 1 if direction == 1 else -1
 
-
 def solve_level_bfs(env):
     num_blocks = env.num_blocks
     key_idx = list(env.blocks.keys()).index(env.key_id)
@@ -167,30 +157,21 @@ def solve_level_bfs(env):
     start_x = env.all_x.copy()
     start_y = env.all_y.copy()
 
-    visited = {}
+    visited = set()
     queue = deque()
-
-    start_state = encode_state(start_x, start_y, num_blocks)
-    visited[start_state] = 0
-    queue.append((start_x, start_y))
-
-    solved_states = {}
+    queue.append((start_x, start_y, 0))
+    visited.add(encode_state(start_x, start_y, num_blocks))
 
     while queue:
-        all_x, all_y = queue.popleft()
-        cur_state = encode_state(all_x, all_y, num_blocks)
-        cur_steps = visited[cur_state]
+        all_x, all_y, steps = queue.popleft()
 
         if is_solved_numba(all_x, env.all_w, key_idx):
-            solved_states[cur_state] = cur_steps
-            continue
+            return steps  # возвращаем количество шагов до решения
 
         for idx in range(num_blocks):
             for direction in (0, 1):
-                if not can_move_numba(
-                    all_x, all_y, env.all_w, env.all_h,
-                    env.types, idx, direction, num_blocks
-                ):
+                if not can_move_numba(all_x, all_y, env.all_w, env.all_h,
+                                      env.types, idx, direction, num_blocks):
                     continue
 
                 nx = all_x.copy()
@@ -199,21 +180,10 @@ def solve_level_bfs(env):
 
                 state = encode_state(nx, ny, num_blocks)
                 if state not in visited:
-                    visited[state] = cur_steps + 1
-                    queue.append((nx, ny))
+                    visited.add(state)
+                    queue.append((nx, ny, steps + 1))
 
-    dist_to_solution = {}
-    for state, steps in visited.items():
-        best = None
-        for solved_state, solved_steps in solved_states.items():
-            if solved_steps >= steps:
-                d = solved_steps - steps
-                best = d if best is None else min(best, d)
-        if best is not None:
-            dist_to_solution[state] = best
-
-    return dist_to_solution
-
+    return 0  # если решение не найдено
 
 # ========================================================================
 # ===========================   ENV CLASS   ===============================
@@ -238,8 +208,6 @@ class PuzzleEnv(gym.Env):
         self.prev_key_x = 0
         self.logging_enabled = True
         self.dist_to_solution = 0
-
-        self.dist_map = {}
         self.prev_dist_to_solution = None
 
         self.all_x = np.full(MAX_BLOCKS, -1, dtype=np.int32)
@@ -298,10 +266,7 @@ class PuzzleEnv(gym.Env):
             self.is_key_flags[i] = 1 if bid == self.key_id else 0
 
         # ----------------- считаем BFS сразу -----------------
-        self.dist_map = solve_level_bfs(self)
-
-        state = encode_state(self.all_x, self.all_y, self.num_blocks)
-        self.dist_to_solution = self.dist_map.get(state)
+        self.dist_to_solution = solve_level_bfs(self)
         self.prev_dist_to_solution = self.dist_to_solution
 
         if self.logging_enabled:
@@ -412,9 +377,7 @@ class PuzzleEnv(gym.Env):
             self.prev_key_x = key["x"]
 
         # ----------------- пересчитываем BFS каждый шаг -----------------
-        state = encode_state(self.all_x, self.all_y, self.num_blocks)
-        self.dist_map = solve_level_bfs(self)
-        cur_dist = self.dist_map.get(state)
+        cur_dist = solve_level_bfs(self)
 
         # Приблизился ли к решению головоломки
         step_to_solution = 0
