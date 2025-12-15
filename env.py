@@ -11,10 +11,6 @@ FEATURES_PER_BLOCK = 6
 OBS_SIZE = MAX_BLOCKS * FEATURES_PER_BLOCK
 GRID_SIZE = 6
 
-# ================= BFS GLOBAL CACHE =================
-# text_level -> { state_tuple : dist_to_solution }
-BFS_CACHE = {}
-
 
 # ----------------- STATE ENCODING -----------------
 def encode_state(all_x, all_y, num_blocks):
@@ -113,12 +109,10 @@ def is_solved_numba(all_x, all_w, key_index):
 @njit
 def check_action_flags_numba(last_block_idx, last_dir, current_block_idx, current_dir):
     invalid = 1 if current_block_idx == -1 else 0
-
     reverse = 0
     if invalid == 0:
         if last_block_idx == current_block_idx and last_dir != current_dir:
             reverse = 1
-
     return invalid, reverse
 
 
@@ -138,31 +132,22 @@ def compute_reward_numba(
     step_to_solution,
 ):
     reward = 0.0
-
     if moved:
         reward -= 0.05
-
     if invalid:
         reward -= 1.0
-
     if reverse:
         reward -= 3.0
-
     if violated:
         reward -= 3.0
-
     if key_moved:
         reward += key_x * 0.5
-
     if step_to_solution != 0:
         reward += step_to_solution * 3
-
     if solved:
         reward += 10.0
-
     if (not solved) and terminated:
         reward -= 5.0
-
     return reward
 
 
@@ -312,10 +297,8 @@ class PuzzleEnv(gym.Env):
             self.types[i] = 0 if b["type"] == "H" else 1
             self.is_key_flags[i] = 1 if bid == self.key_id else 0
 
-        if self.text_level not in BFS_CACHE:
-            BFS_CACHE[self.text_level] = solve_level_bfs(self)
-
-        self.dist_map = BFS_CACHE[self.text_level]
+        # ----------------- считаем BFS сразу -----------------
+        self.dist_map = solve_level_bfs(self)
 
         state = encode_state(self.all_x, self.all_y, self.num_blocks)
         self.dist_to_solution = self.dist_map.get(state)
@@ -428,7 +411,9 @@ class PuzzleEnv(gym.Env):
         if is_key_moved:
             self.prev_key_x = key["x"]
 
+        # ----------------- пересчитываем BFS каждый шаг -----------------
         state = encode_state(self.all_x, self.all_y, self.num_blocks)
+        self.dist_map = solve_level_bfs(self)
         cur_dist = self.dist_map.get(state)
 
         # Приблизился ли к решению головоломки
