@@ -135,8 +135,7 @@ def compute_reward_numba(
     invalid,
     key_moved,
     key_x,
-    got_closer_to_solving_puzzle,
-    cur_dist,
+    step_to_solution,
 ):
     reward = 0.0
 
@@ -155,8 +154,8 @@ def compute_reward_numba(
     if key_moved:
         reward += key_x * 0.5
 
-    if got_closer_to_solving_puzzle:
-        reward += 0.5
+    if step_to_solution != 0:
+        reward += step_to_solution * 3
 
     if solved:
         reward += 10.0
@@ -253,6 +252,7 @@ class PuzzleEnv(gym.Env):
         self.last_action = None
         self.prev_key_x = 0
         self.logging_enabled = True
+        self.dist_to_solution = 0
 
         self.dist_map = {}
         self.prev_dist_to_solution = None
@@ -286,12 +286,14 @@ class PuzzleEnv(gym.Env):
         self.block_texts = {}
         self.key_id = None
         self.last_action = None
-        self.prev_key_x = 0
         self.step_num = 0
 
         self.blocks, self.block_texts, self.key_id = parse_level(
             text_level=self.text_level
         )
+
+        key = self.blocks[self.key_id]
+        self.prev_key_x = key["x"]
 
         # update vector arrays
         self.num_blocks = len(self.blocks)
@@ -316,7 +318,8 @@ class PuzzleEnv(gym.Env):
         self.dist_map = BFS_CACHE[self.text_level]
 
         state = encode_state(self.all_x, self.all_y, self.num_blocks)
-        self.prev_dist_to_solution = self.dist_map.get(state)
+        self.dist_to_solution = self.dist_map.get(state)
+        self.prev_dist_to_solution = self.dist_to_solution
 
         if self.logging_enabled:
             log_level(self, self.text_level, self.prev_dist_to_solution)
@@ -408,7 +411,6 @@ class PuzzleEnv(gym.Env):
         # ----- moving logic -----
         moved = False
         violated = False
-        prev_key_x = self.prev_key_x
         prev_block_pos = None
 
         if not invalid_action:
@@ -422,7 +424,7 @@ class PuzzleEnv(gym.Env):
 
         # ----- key movement -----
         key = self.blocks[self.key_id]
-        is_key_moved = key["x"] > prev_key_x
+        is_key_moved = key["x"] > self.prev_key_x
         if is_key_moved:
             self.prev_key_x = key["x"]
 
@@ -430,8 +432,11 @@ class PuzzleEnv(gym.Env):
         cur_dist = self.dist_map.get(state)
 
         # Приблизился ли к решению головоломки
-        got_closer_to_solving_puzzle = self.prev_dist_to_solution is not None and cur_dist < self.prev_dist_to_solution
-        self.prev_dist_to_solution = cur_dist
+        step_to_solution = 0
+        if self.prev_dist_to_solution is not None and cur_dist < self.prev_dist_to_solution:
+            step_to_solution = (self.dist_to_solution - cur_dist) / self.dist_to_solution
+            # print(f"step_to_solution: {step_to_solution:.2f}")
+            self.prev_dist_to_solution = cur_dist
 
         # ----- solved check -----
         is_solved = self._is_solved()
@@ -450,8 +455,7 @@ class PuzzleEnv(gym.Env):
             invalid_action,
             is_key_moved,
             key["x"],
-            got_closer_to_solving_puzzle,
-            cur_dist,
+            step_to_solution,
         )
 
         if self.logging_enabled:
