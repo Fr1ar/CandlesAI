@@ -140,6 +140,7 @@ class SequentialMultiLevelEnv(PuzzleEnv):
 
         meta = current_level.get("meta", {})
         min_moves = meta.get("min_moves", 0)
+        self.max_steps = min_moves * 3
 
         if self.logging_enabled:
             log(
