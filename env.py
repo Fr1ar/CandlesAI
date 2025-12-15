@@ -4,11 +4,21 @@ from gymnasium import spaces
 from parser import parse_level
 from utils import log_action, log_level, log_action_mask
 from numba import njit
+from collections import deque
 
 MAX_BLOCKS = 15
 FEATURES_PER_BLOCK = 6
 OBS_SIZE = MAX_BLOCKS * FEATURES_PER_BLOCK
 GRID_SIZE = 6
+
+# ================= BFS GLOBAL CACHE =================
+# text_level -> { state_tuple : dist_to_solution }
+BFS_CACHE = {}
+
+
+# ----------------- STATE ENCODING -----------------
+def encode_state(all_x, all_y, num_blocks):
+    return tuple(all_x[:num_blocks]) + tuple(all_y[:num_blocks])
 
 
 # ----------------- NUMBA COLLISION CHECK -----------------
@@ -125,6 +135,8 @@ def compute_reward_numba(
     invalid,
     key_moved,
     key_x,
+    got_closer_to_solving_puzzle,
+    cur_dist,
 ):
     reward = 0.0
 
@@ -143,6 +155,9 @@ def compute_reward_numba(
     if key_moved:
         reward += key_x * 0.5
 
+    if got_closer_to_solving_puzzle:
+        reward += 0.5
+
     if solved:
         reward += 10.0
 
@@ -152,10 +167,73 @@ def compute_reward_numba(
     return reward
 
 
+# ======================= BFS SOLVER =======================
+@njit
+def apply_move_numba(all_x, all_y, idx, direction, types):
+    if types[idx] == 0:
+        all_x[idx] += 1 if direction == 1 else -1
+    else:
+        all_y[idx] += 1 if direction == 1 else -1
+
+
+def solve_level_bfs(env):
+    num_blocks = env.num_blocks
+    key_idx = list(env.blocks.keys()).index(env.key_id)
+
+    start_x = env.all_x.copy()
+    start_y = env.all_y.copy()
+
+    visited = {}
+    queue = deque()
+
+    start_state = encode_state(start_x, start_y, num_blocks)
+    visited[start_state] = 0
+    queue.append((start_x, start_y))
+
+    solved_states = {}
+
+    while queue:
+        all_x, all_y = queue.popleft()
+        cur_state = encode_state(all_x, all_y, num_blocks)
+        cur_steps = visited[cur_state]
+
+        if is_solved_numba(all_x, env.all_w, key_idx):
+            solved_states[cur_state] = cur_steps
+            continue
+
+        for idx in range(num_blocks):
+            for direction in (0, 1):
+                if not can_move_numba(
+                    all_x, all_y, env.all_w, env.all_h,
+                    env.types, idx, direction, num_blocks
+                ):
+                    continue
+
+                nx = all_x.copy()
+                ny = all_y.copy()
+                apply_move_numba(nx, ny, idx, direction, env.types)
+
+                state = encode_state(nx, ny, num_blocks)
+                if state not in visited:
+                    visited[state] = cur_steps + 1
+                    queue.append((nx, ny))
+
+    dist_to_solution = {}
+    for state, steps in visited.items():
+        best = None
+        for solved_state, solved_steps in solved_states.items():
+            if solved_steps >= steps:
+                d = solved_steps - steps
+                best = d if best is None else min(best, d)
+        if best is not None:
+            dist_to_solution[state] = best
+
+    return dist_to_solution
+
+
 # ========================================================================
 # ===========================   ENV CLASS   ===============================
 # ========================================================================
-
 
 class PuzzleEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
@@ -176,7 +254,9 @@ class PuzzleEnv(gym.Env):
         self.prev_key_x = 0
         self.logging_enabled = True
 
-        # ----------------- Numba data arrays -----------------
+        self.dist_map = {}
+        self.prev_dist_to_solution = None
+
         self.all_x = np.full(MAX_BLOCKS, -1, dtype=np.int32)
         self.all_y = np.full(MAX_BLOCKS, -1, dtype=np.int32)
         self.all_w = np.zeros(MAX_BLOCKS, dtype=np.int32)
@@ -208,6 +288,7 @@ class PuzzleEnv(gym.Env):
         self.last_action = None
         self.prev_key_x = 0
         self.step_num = 0
+
         self.blocks, self.block_texts, self.key_id = parse_level(
             text_level=self.text_level
         )
@@ -229,8 +310,16 @@ class PuzzleEnv(gym.Env):
             self.types[i] = 0 if b["type"] == "H" else 1
             self.is_key_flags[i] = 1 if bid == self.key_id else 0
 
+        if self.text_level not in BFS_CACHE:
+            BFS_CACHE[self.text_level] = solve_level_bfs(self)
+
+        self.dist_map = BFS_CACHE[self.text_level]
+
+        state = encode_state(self.all_x, self.all_y, self.num_blocks)
+        self.prev_dist_to_solution = self.dist_map.get(state)
+
         if self.logging_enabled:
-            log_level(self, self.text_level)
+            log_level(self, self.text_level, self.prev_dist_to_solution)
 
         return self._get_obs(), {}
 
@@ -337,6 +426,13 @@ class PuzzleEnv(gym.Env):
         if is_key_moved:
             self.prev_key_x = key["x"]
 
+        state = encode_state(self.all_x, self.all_y, self.num_blocks)
+        cur_dist = self.dist_map.get(state)
+
+        # Приблизился ли к решению головоломки
+        got_closer_to_solving_puzzle = self.prev_dist_to_solution is not None and cur_dist < self.prev_dist_to_solution
+        self.prev_dist_to_solution = cur_dist
+
         # ----- solved check -----
         is_solved = self._is_solved()
         terminated = is_solved or self.step_num >= self.max_steps - 1
@@ -354,10 +450,12 @@ class PuzzleEnv(gym.Env):
             invalid_action,
             is_key_moved,
             key["x"],
+            got_closer_to_solving_puzzle,
+            cur_dist,
         )
 
         if self.logging_enabled:
-            log_action(action, self, moved, reward, prev_block_pos, direction)
+            log_action(action, self, moved, reward, cur_dist, prev_block_pos, direction)
 
         self.step_num += 1
         self.total_steps += 1
